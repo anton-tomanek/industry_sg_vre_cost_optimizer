@@ -50,7 +50,68 @@ class UserInputPiece(BasePiece):
         dt_iso = pd.to_datetime(raw_dt, errors="coerce", dayfirst=False, format="mixed")
         dt_local = pd.to_datetime(raw_dt, errors="coerce", dayfirst=True, format="mixed")
         df["datetime"] = dt_iso.fillna(dt_local)
+        # Keep a single datetime column. Leaving date_time/timestamp in place
+        # used to get summed into load_kw (Excel serial / ns since epoch).
+        leftover = [c for c in df.columns if c != "datetime" and c in {"date_time", "timestamp", "date", "time"}]
+        if leftover:
+            df = df.drop(columns=leftover)
         return df.dropna(subset=["datetime"]).sort_values("datetime").reset_index(drop=True)
+
+    @staticmethod
+    def _power_columns(columns: list[str]) -> list[str]:
+        skip = {
+            "datetime",
+            "date_time",
+            "timestamp",
+            "date",
+            "time",
+            "price_eur_per_kwh",
+            "price_eur_kwh",
+            "price_eur_mwh",
+        }
+        hints = ("prikon", "load", "power", "odber", "consumption", "vykon", "kw")
+        out = []
+        for name in columns:
+            key = str(name).strip().lower().replace(" ", "_")
+            if key in skip or "price" in key or "cena" in key:
+                continue
+            if any(h in key for h in hints):
+                out.append(name)
+        return out
+
+    @classmethod
+    def _build_load_kw(cls, df: pd.DataFrame) -> pd.Series:
+        if "load_kw" in df.columns:
+            return pd.to_numeric(df["load_kw"], errors="coerce").fillna(0.0)
+        candidates = cls._power_columns(list(df.columns))
+        if not candidates:
+            raise ValueError(
+                "Súbor musí mať stĺpec load_kw, alebo stĺpce odberu (prikon A/B/C…)."
+            )
+        parts = []
+        for col in candidates:
+            series = df[col]
+            if pd.api.types.is_datetime64_any_dtype(series):
+                continue
+            num = pd.to_numeric(series, errors="coerce")
+            if num.notna().sum() == 0:
+                continue
+            median = float(num.median())
+            if abs(median) > 1e6:
+                continue
+            parts.append(num.fillna(0.0))
+        if not parts:
+            raise ValueError(
+                "Nenašiel sa použiteľný stĺpec odberu. Použite load_kw alebo prikon A/B/C…"
+            )
+        load = parts[0]
+        for extra in parts[1:]:
+            load = load.add(extra, fill_value=0.0)
+        if float(load.median()) > 1e6:
+            raise ValueError(
+                "Odber vyšiel ako nezmyselne veľký výkon. Skontrolujte, či sú hodnoty v kW."
+            )
+        return load
 
     @staticmethod
     def _collapse_duplicate_timestamps(df: pd.DataFrame) -> pd.DataFrame:
@@ -186,13 +247,9 @@ class UserInputPiece(BasePiece):
             merge_mode = "single_csv_normalized"
         else:
             load_df = df.copy()
-            if "load_kw" not in load_df.columns:
-                load_candidates = [c for c in load_df.columns if c not in {"datetime", "price_eur_per_kwh"}]
-                if not load_candidates:
-                    raise ValueError("Load CSV must contain load_kw or numeric consumption columns.")
-                load_df["load_kw"] = (
-                    load_df[load_candidates].apply(pd.to_numeric, errors="coerce").fillna(0.0).sum(axis=1)
-                )
+            used = self._power_columns(list(load_df.columns))
+            load_df["load_kw"] = self._build_load_kw(load_df)
+            _log(f"Odber = súčet stĺpcov {used or ['load_kw']}; median={float(load_df['load_kw'].median()):.2f} kW")
             load_df = load_df[["datetime", "load_kw"]]
             load_df = self._collapse_duplicate_timestamps(load_df)
 
