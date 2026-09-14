@@ -152,8 +152,8 @@
                             "type": "null"
                         }
                     ],
-                    "default": null,
-                    "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+                    "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+                    "description": "OneData base dir for run outputs (default onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs; empty string keeps results on local Domino storage only)",
                     "title": "Onedata Output Dir"
                 }
             },
@@ -301,8 +301,8 @@
                             "type": "null"
                         }
                     ],
-                    "default": null,
-                    "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+                    "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+                    "description": "OneData base dir for run outputs (default onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs; empty string keeps results on local Domino storage only)",
                     "title": "Onedata Output Dir"
                 }
             },
@@ -753,8 +753,8 @@
                             "type": "null"
                         }
                     ],
-                    "default": null,
-                    "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+                    "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+                    "description": "OneData base dir for run outputs (default onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs; empty string keeps results on local Domino storage only)",
                     "title": "Onedata Output Dir"
                 }
             },
@@ -887,8 +887,8 @@
                             "type": "null"
                         }
                     ],
-                    "default": null,
-                    "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+                    "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+                    "description": "OneData base dir for run outputs (default onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs; empty string keeps results on local Domino storage only)",
                     "title": "Onedata Output Dir"
                 }
             },
@@ -1428,8 +1428,8 @@
                             "type": "null"
                         }
                     ],
-                    "default": null,
-                    "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+                    "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+                    "description": "OneData base dir for run outputs (default onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs; empty string keeps results on local Domino storage only)",
                     "title": "Onedata Output Dir"
                 }
             },
@@ -1649,8 +1649,8 @@
                             "type": "null"
                         }
                     ],
-                    "default": null,
-                    "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+                    "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+                    "description": "OneData base dir for run outputs (default onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs; empty string keeps results on local Domino storage only)",
                     "title": "Onedata Output Dir"
                 }
             },
@@ -1755,8 +1755,8 @@
                             "type": "null"
                         }
                     ],
-                    "default": null,
-                    "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+                    "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+                    "description": "OneData base dir for run outputs (default onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs; empty string keeps results on local Domino storage only)",
                     "title": "Onedata Output Dir"
                 }
             },
@@ -2560,8 +2560,8 @@
                             "type": "null"
                         }
                     ],
-                    "default": null,
-                    "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+                    "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+                    "description": "OneData base dir for run outputs (default onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs; empty string keeps results on local Domino storage only)",
                     "title": "Onedata Output Dir"
                 }
             },
@@ -2672,8 +2672,8 @@
                             "type": "null"
                         }
                     ],
-                    "default": null,
-                    "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+                    "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+                    "description": "OneData base dir for run outputs (default onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs; empty string keeps results on local Domino storage only)",
                     "title": "Onedata Output Dir"
                 }
             },
@@ -2789,8 +2789,8 @@
                             "type": "null"
                         }
                     ],
-                    "default": null,
-                    "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+                    "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+                    "description": "OneData base dir for run outputs (default onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs; empty string keeps results on local Domino storage only)",
                     "title": "Onedata Output Dir"
                 }
             },
@@ -2901,8 +2901,8 @@
                             "type": "null"
                         }
                     ],
-                    "default": null,
-                    "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+                    "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+                    "description": "OneData base dir for run outputs (default onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs; empty string keeps results on local Domino storage only)",
                     "title": "Onedata Output Dir"
                 }
             },
@@ -3484,8 +3484,8 @@
                             "type": "null"
                         }
                     ],
-                    "default": null,
-                    "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+                    "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+                    "description": "OneData base dir for run outputs (default onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs; empty string keeps results on local Domino storage only)",
                     "title": "Onedata Output Dir"
                 }
             },
@@ -3684,8 +3684,8 @@
                             "type": "null"
                         }
                     ],
-                    "default": null,
-                    "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+                    "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+                    "description": "OneData base dir for run outputs (default onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs; empty string keeps results on local Domino storage only)",
                     "title": "Onedata Output Dir"
                 }
             },
