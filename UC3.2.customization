@@ -8,7 +8,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "properties": {
           "run_id": {
@@ -112,8 +112,8 @@
                 "type": "null"
               }
             ],
-            "default": null,
-            "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+            "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+            "description": "OneData base dir for run outputs (empty string keeps results on local Domino storage only)",
             "title": "Onedata Output Dir"
           }
         },
@@ -147,7 +147,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "properties": {
           "run_id": {
@@ -243,8 +243,8 @@
                 "type": "null"
               }
             ],
-            "default": null,
-            "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+            "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+            "description": "OneData base dir for run outputs (empty string keeps results on local Domino storage only)",
             "title": "Onedata Output Dir"
           }
         },
@@ -278,7 +278,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "properties": {
           "run_id": {
@@ -365,8 +365,8 @@
                 "type": "null"
               }
             ],
-            "default": null,
-            "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+            "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+            "description": "OneData base dir for run outputs (empty string keeps results on local Domino storage only)",
             "title": "Onedata Output Dir"
           }
         },
@@ -400,7 +400,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "additionalProperties": true,
         "properties": {
@@ -572,7 +572,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "properties": {
           "run_id": {
@@ -691,8 +691,8 @@
                 "type": "null"
               }
             ],
-            "default": null,
-            "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+            "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+            "description": "OneData base dir for run outputs (empty string keeps results on local Domino storage only)",
             "title": "Onedata Output Dir"
           }
         },
@@ -730,7 +730,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "additionalProperties": true,
         "properties": {
@@ -907,7 +907,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "additionalProperties": true,
         "properties": {
@@ -1086,7 +1086,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "additionalProperties": true,
         "properties": {
@@ -1273,7 +1273,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "properties": {
           "data_path": {
@@ -1373,7 +1373,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "additionalProperties": true,
         "properties": {
@@ -1676,7 +1676,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "additionalProperties": true,
         "properties": {
@@ -2005,7 +2005,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "properties": {
           "baseline_model_path": {
@@ -2127,7 +2127,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "$defs": {
           "ModelSpec": {
@@ -2569,7 +2569,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "properties": {
           "forecast_csv_path": {
@@ -2679,7 +2679,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "properties": {
           "run_id": {
@@ -2761,8 +2761,8 @@
                 "type": "null"
               }
             ],
-            "default": null,
-            "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+            "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+            "description": "OneData base dir for run outputs (empty string keeps results on local Domino storage only)",
             "title": "Onedata Output Dir"
           }
         },
@@ -2796,7 +2796,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "properties": {
           "run_id": {
@@ -2915,8 +2915,8 @@
                 "type": "null"
               }
             ],
-            "default": null,
-            "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+            "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+            "description": "OneData base dir for run outputs (empty string keeps results on local Domino storage only)",
             "title": "Onedata Output Dir"
           }
         },
@@ -2950,7 +2950,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "properties": {
           "run_id": {
@@ -3032,8 +3032,8 @@
                 "type": "null"
               }
             ],
-            "default": null,
-            "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+            "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+            "description": "OneData base dir for run outputs (empty string keeps results on local Domino storage only)",
             "title": "Onedata Output Dir"
           }
         },
@@ -3067,7 +3067,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "properties": {
           "run_id": {
@@ -3171,8 +3171,8 @@
                 "type": "null"
               }
             ],
-            "default": null,
-            "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+            "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+            "description": "OneData base dir for run outputs (empty string keeps results on local Domino storage only)",
             "title": "Onedata Output Dir"
           }
         },
@@ -3206,7 +3206,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "properties": {
           "run_id": {
@@ -3330,8 +3330,8 @@
                 "type": "null"
               }
             ],
-            "default": null,
-            "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+            "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+            "description": "OneData base dir for run outputs (empty string keeps results on local Domino storage only)",
             "title": "Onedata Output Dir"
           }
         },
@@ -3367,7 +3367,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "properties": {
           "run_id": {
@@ -3523,8 +3523,8 @@
                 "type": "null"
               }
             ],
-            "default": null,
-            "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+            "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+            "description": "OneData base dir for run outputs (empty string keeps results on local Domino storage only)",
             "title": "Onedata Output Dir"
           }
         },
@@ -3562,7 +3562,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "properties": {
           "run_id": {
@@ -3638,8 +3638,8 @@
                 "type": "null"
               }
             ],
-            "default": null,
-            "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+            "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+            "description": "OneData base dir for run outputs (empty string keeps results on local Domino storage only)",
             "title": "Onedata Output Dir"
           }
         },
@@ -3673,7 +3673,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "properties": {
           "run_id": {
@@ -3760,8 +3760,8 @@
                 "type": "null"
               }
             ],
-            "default": null,
-            "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+            "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+            "description": "OneData base dir for run outputs (empty string keeps results on local Domino storage only)",
             "title": "Onedata Output Dir"
           }
         },
@@ -3795,7 +3795,7 @@
         "requirements_file": "requirements_0.txt",
         "dockerfile": null
       },
-      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0",
+      "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.48-group0",
       "input_schema": {
         "properties": {
           "run_id": {
@@ -3962,8 +3962,8 @@
                 "type": "null"
               }
             ],
-            "default": null,
-            "description": "Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+            "default": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs",
+            "description": "OneData base dir for run outputs (empty string keeps results on local Domino storage only)",
             "title": "Onedata Output Dir"
           }
         },

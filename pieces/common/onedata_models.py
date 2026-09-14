@@ -10,11 +10,13 @@ try:
     from common.onedata_defaults import (
         DEFAULT_ONEDATA_TOKEN,
         DEFAULT_ONEZONE_HOST,
+        DEFAULT_OUTPUT_DIR,
     )
 except ModuleNotFoundError:
     from pieces.common.onedata_defaults import (
         DEFAULT_ONEDATA_TOKEN,
         DEFAULT_ONEZONE_HOST,
+        DEFAULT_OUTPUT_DIR,
     )
 
 
@@ -30,8 +32,11 @@ class OneDataSecretsModel(BaseModel):
       description="Onedata access token (default in code; Domino secrets optional)",
   )
   onedata_output_dir: Optional[str] = Field(
-      default=None,
-      description="Optional OneData base dir for run outputs (empty keeps results on local Domino storage)",
+      default=DEFAULT_OUTPUT_DIR,
+      description=(
+          "OneData base dir for run outputs "
+          f"(default {DEFAULT_OUTPUT_DIR}; empty string keeps results on local Domino storage only)"
+      ),
   )
 
 

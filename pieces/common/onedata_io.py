@@ -115,9 +115,13 @@ def effective_secrets(secrets_data: Any, *, use_defaults: bool = False) -> dict[
         token = _resolve_token() or DEFAULT_ONEDATA_TOKEN
     if use_defaults and not host:
         host = DEFAULT_ONEZONE_HOST
-    output = _get(secrets_data, "onedata_output_dir") or os.environ.get("ONEDATA_OUTPUT_BASE")
-    if use_defaults and not output:
-        output = DEFAULT_OUTPUT_DIR
+    output = _get(secrets_data, "onedata_output_dir")
+    if isinstance(output, str) and not output.strip():
+        output = ""
+    else:
+        output = (str(output).strip() if output else None) or os.environ.get("ONEDATA_OUTPUT_BASE")
+        if use_defaults and not output:
+            output = DEFAULT_OUTPUT_DIR
     return {
         "onedata_onezone_host": host,
         "onedata_token": token,
@@ -413,8 +417,8 @@ def listdir(path: str | os.PathLike[str]) -> list[str]:
 # These two helpers let EVERY piece run fully through OneData WITHOUT touching
 # its internal I/O: inputs are downloaded to a local temp before the piece runs
 # (so the unchanged piece logic works on local files), and the piece's outputs
-# are uploaded from results_path to OneData afterwards. Both are no-ops when no
-# OneData secret is configured, so local/Domino-without-secrets is unchanged.
+# are uploaded from results_path to OneData afterwards
+# (default ``onedata:///SCDI/UC3.2_COST_OPTIMIZER/outputs``).
 
 def _remote_name(path: str) -> str:
     fs, p = _fs(str(path))
@@ -422,10 +426,11 @@ def _remote_name(path: str) -> str:
 
 
 def _output_base(secrets_data: Any) -> str | None:
-    val = _get(secrets_data, "onedata_output_dir") or os.environ.get("ONEDATA_OUTPUT_BASE")
-    if val:
-        return str(val)
-    return None
+    raw = _get(secrets_data, "onedata_output_dir")
+    if isinstance(raw, str) and not raw.strip():
+        return None
+    val = (str(raw).strip() if raw else None) or os.environ.get("ONEDATA_OUTPUT_BASE") or DEFAULT_OUTPUT_DIR
+    return str(val).strip() or None
 
 
 def resolve_run_id(input_data: Any, secrets_data: Any, *, generate: bool = False) -> str | None:
@@ -618,9 +623,9 @@ def mirror_results(results_path: str | os.PathLike[str], secrets_data: Any,
                    piece_name: str, *, run_id: str | None = None) -> str | None:
     """Upload every file under ``results_path`` to ``<base>/<run_id>/<piece_name>/``.
 
-    ``base`` comes from the ``onedata_output_dir`` secret or the
-    ``ONEDATA_OUTPUT_BASE`` env var. When ``run_id`` is set, outputs are isolated
-    per workflow run. No-op when not configured. Returns the OneData target dir.
+    ``base`` comes from the ``onedata_output_dir`` secret, ``ONEDATA_OUTPUT_BASE``,
+    or ``DEFAULT_OUTPUT_DIR``. An empty secret keeps results on local Domino storage.
+    When ``run_id`` is set, outputs are isolated per workflow run. Returns the OneData target dir.
     """
     base = _mirror_base(secrets_data, run_id)
     if not base:
