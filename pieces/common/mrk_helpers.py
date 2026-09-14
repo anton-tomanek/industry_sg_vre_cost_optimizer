@@ -56,12 +56,7 @@ def build_price_series(df: pd.DataFrame, cfg: dict) -> pd.Series:
     return pd.Series(default_price, index=df.index, dtype=float)
 
 
-def synthetic_pv_kw(
-    dt: pd.Series,
-    installed_kwp: float,
-    *,
-    yield_kwh_per_kwp_year: float = 1000.0,
-) -> pd.Series:
+def synthetic_pv_kw(dt: pd.Series, installed_kwp: float) -> pd.Series:
     if installed_kwp <= 0:
         return pd.Series(0.0, index=dt.index, name="pv_kw")
 
@@ -71,13 +66,4 @@ def synthetic_pv_kw(
     seasonal = 0.85 + 0.15 * np.cos(2 * math.pi * (day_of_year - 172) / 365.0)
     solar_elev = np.clip(np.sin((hours - 6.0) / 12.0 * np.pi), 0.0, 1.0) ** 1.2
     raw = np.asarray(seasonal * solar_elev * installed_kwp, dtype=float)
-
-    diffs = t.to_series().diff().dt.total_seconds().median()
-    dt_h = float(diffs) / 3600.0 if pd.notna(diffs) and diffs > 0 else 0.25
-    energy_raw = float(np.sum(raw * dt_h))
-    sample_hours = max(float(len(raw)) * dt_h, dt_h)
-    sample_year_fraction = sample_hours / 8760.0
-    target_e = yield_kwh_per_kwp_year * installed_kwp * sample_year_fraction
-    if energy_raw > 1e-6:
-        raw = raw * (target_e / energy_raw)
     return pd.Series(np.clip(raw, 0.0, installed_kwp * 1.15), index=dt.index, name="pv_kw")

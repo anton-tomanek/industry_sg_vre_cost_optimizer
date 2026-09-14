@@ -1,0 +1,293 @@
+{
+  "schema": "uc32_battery_catalog_v1",
+  "updated_at": "2026-09-14",
+  "note": "Indicative commercial and industrial BESS from manufacturer datasheets. NREL SAM publishes PV modules and inverters only, so this local file is the battery fallback. Confirm availability, warranty and price with a supplier before ordering. Parallel SKUs are manufacturer-supported cabinet counts, not custom packs.",
+  "products": [
+    {
+      "id": "byd_battery_box_premium_hvm_22",
+      "manufacturer": "BYD",
+      "product_line": "Battery-Box Premium HVM 22.1",
+      "nominal_kwh": 22.08,
+      "max_power_kw": 20.5,
+      "chemistry": "LFP",
+      "form_factor": "indoor_stack",
+      "source": "https://www.bydbatterybox.com/uploads/downloads/220426%20BYD%20Battery-Box%20Premium%20HVS_HVM%20Datasheet%20V1.6%20EN-626901613c1a0.pdf",
+      "source_note": "Usable energy 22.08 kWh; 50 A at 409.6 V nominal."
+    },
+    {
+      "id": "byd_battery_box_premium_hvm_3x22",
+      "manufacturer": "BYD",
+      "product_line": "Battery-Box Premium HVM 3×22.1",
+      "nominal_kwh": 66.24,
+      "max_power_kw": 61.4,
+      "chemistry": "LFP",
+      "form_factor": "indoor_stack",
+      "source": "https://www.bydbatterybox.com/uploads/downloads/220426%20BYD%20Battery-Box%20Premium%20HVS_HVM%20Datasheet%20V1.6%20EN-626901613c1a0.pdf",
+      "source_note": "Datasheet maximum: three identical HVM 22.1 towers in parallel, 66.2 kWh."
+    },
+    {
+      "id": "goodwe_esa_60",
+      "manufacturer": "GoodWe",
+      "product_line": "ESA GW29.9/60-ESA-ACPN-G10",
+      "nominal_kwh": 60.0,
+      "max_power_kw": 29.9,
+      "chemistry": "LFP",
+      "form_factor": "outdoor_cabinet",
+      "source": "https://en.goodwe.com/Ftp/Downloads/Datasheet/AU/GW_ESA30-60_Datasheet-AU.pdf",
+      "source_note": "All-in-one C&I cabinet, 29.9 kW / 60 kWh usable."
+    },
+    {
+      "id": "alphaess_storion_t30",
+      "manufacturer": "AlphaESS",
+      "product_line": "STORION-T30",
+      "nominal_kwh": 68.8,
+      "max_power_kw": 30.0,
+      "chemistry": "LFP",
+      "form_factor": "cabinet",
+      "source": "https://www.alphaess.com/storion-t30-30kw-commercial-and-industrial-energy-storage-system",
+      "source_note": "C&I cabinet 30 kW, capacity range 28.7–68.8 kWh; row is the maximum configuration."
+    },
+    {
+      "id": "tesvolt_ts_i_hv_80_e",
+      "manufacturer": "TESVOLT",
+      "product_line": "TS-I HV 80 E",
+      "nominal_kwh": 80.0,
+      "max_power_kw": 80.0,
+      "chemistry": "NMC",
+      "form_factor": "indoor_cabinet",
+      "source": "https://tesvolt.com/_media/05%20SERVICE/03%20Downloads/E-Serie/TS-I_HV_80__100_E/Datenblatt/RD.TI.075.E.en-US_3.pdf",
+      "source_note": "80 kWh at 100% DoD, 1C, Samsung SDI prismatic cells, 80 kW with one IPU."
+    },
+    {
+      "id": "tesvolt_ts_i_hv_100_e",
+      "manufacturer": "TESVOLT",
+      "product_line": "TS-I HV 100 E",
+      "nominal_kwh": 96.0,
+      "max_power_kw": 96.0,
+      "chemistry": "NMC",
+      "form_factor": "indoor_cabinet",
+      "source": "https://tesvolt.com/_media/05%20SERVICE/03%20Downloads/E-Serie/TS-I_HV_80__100_E/Datenblatt/RD.TI.075.E.en-US_3.pdf",
+      "source_note": "96 kWh at 100% DoD, max C-rate 1C."
+    },
+    {
+      "id": "huawei_luna2000_97_1h1",
+      "manufacturer": "Huawei",
+      "product_line": "LUNA2000-97KWH-1H1",
+      "nominal_kwh": 97.0,
+      "max_power_kw": 97.0,
+      "chemistry": "LFP",
+      "form_factor": "outdoor_cabinet",
+      "source": "https://support.huawei.com/enterprise/en/doc/EDOC1100261584/",
+      "source_note": "C&I Smart String ESS; 1H1 is the 1-hour (≈1C) cabinet."
+    },
+    {
+      "id": "huawei_luna2000_129_2h1",
+      "manufacturer": "Huawei",
+      "product_line": "LUNA2000-129KWH-2H1",
+      "nominal_kwh": 129.0,
+      "max_power_kw": 64.5,
+      "chemistry": "LFP",
+      "form_factor": "outdoor_cabinet",
+      "source": "https://support.huawei.com/enterprise/en/doc/EDOC1100261584/",
+      "source_note": "2-hour cabinet, power ≈ energy/2."
+    },
+    {
+      "id": "huawei_luna2000_161_2h1",
+      "manufacturer": "Huawei",
+      "product_line": "LUNA2000-161KWH-2H1",
+      "nominal_kwh": 161.0,
+      "max_power_kw": 80.5,
+      "chemistry": "LFP",
+      "form_factor": "outdoor_cabinet",
+      "source": "https://support.huawei.com/enterprise/en/doc/EDOC1100261584/",
+      "source_note": "2-hour C&I cabinet."
+    },
+    {
+      "id": "goodwe_esa_180",
+      "manufacturer": "GoodWe",
+      "product_line": "ESA 60 kWh + 2× GW60KWH-D-10 extension",
+      "nominal_kwh": 180.0,
+      "max_power_kw": 29.9,
+      "chemistry": "LFP",
+      "form_factor": "outdoor_cabinet",
+      "source": "https://en.goodwe.com/Ftp/Downloads/Datasheet/AU/GW_ESA30-60_Datasheet-AU.pdf",
+      "source_note": "Datasheet: two extension batteries raise capacity to 180 kWh; PCS stays 29.9 kW unless inverters are paralleled."
+    },
+    {
+      "id": "huawei_luna2000_200_2h1",
+      "manufacturer": "Huawei",
+      "product_line": "LUNA2000-200KWH-2H1",
+      "nominal_kwh": 200.0,
+      "max_power_kw": 100.0,
+      "chemistry": "LFP",
+      "form_factor": "outdoor_cabinet",
+      "source": "https://support.huawei.com/enterprise/en/doc/EDOC1100261584/",
+      "source_note": "2-hour C&I cabinet."
+    },
+    {
+      "id": "huawei_luna2000_215_2s10",
+      "manufacturer": "Huawei",
+      "product_line": "LUNA2000-215-2S10",
+      "nominal_kwh": 215.0,
+      "max_power_kw": 107.5,
+      "chemistry": "LFP",
+      "form_factor": "outdoor_cabinet",
+      "source": "https://solar.huawei.com/admin/asset/v1/pro/view/8459cfc0f20c4ecdbfcc5cbc93c0829d.pdf",
+      "source_note": "Nominal 215 kWh, 0.5CP (four LUNA2000-54-2E1 packs)."
+    },
+    {
+      "id": "sungrow_powerstack_st225",
+      "manufacturer": "Sungrow",
+      "product_line": "PowerStack ST225kWh-110kW-2h",
+      "nominal_kwh": 229.0,
+      "max_power_kw": 110.0,
+      "chemistry": "LFP",
+      "form_factor": "outdoor_cabinet",
+      "source": "https://ger.sungrowpower.com/upload/file/20241108/EN_DS_ST225kWh-110kW-2h_PowerStack_Datasheet.pdf",
+      "source_note": "Rated battery 229 kWh, rated AC 110 kW, liquid-cooled C&I cabinet."
+    },
+    {
+      "id": "huawei_luna2000_241_2s1",
+      "manufacturer": "Huawei",
+      "product_line": "LUNA2000-241-2S1",
+      "nominal_kwh": 241.0,
+      "max_power_kw": 108.5,
+      "chemistry": "LFP",
+      "form_factor": "outdoor_cabinet",
+      "source": "https://solsol.eu/de/file/view/3926/huawei_um_luna2000-107-241kwh-2s1_en.pdf",
+      "source_note": "Nominal 241 kWh, 0.45CP."
+    },
+    {
+      "id": "goodwe_esa_261",
+      "manufacturer": "GoodWe",
+      "product_line": "ESA GW125/261-ESA-LCN-G10",
+      "nominal_kwh": 261.25,
+      "max_power_kw": 125.0,
+      "chemistry": "LFP",
+      "form_factor": "outdoor_cabinet",
+      "source": "https://en.goodwe.com/Ftp/EN/Downloads/Datasheet/GW_ESA-261kWh_Datasheet-EN.pdf",
+      "source_note": "125 kW / 261.25 kWh all-in-one C&I cabinet, 0.5P."
+    },
+    {
+      "id": "tesvolt_ts_i_hv_80_e_x4",
+      "manufacturer": "TESVOLT",
+      "product_line": "TS-I HV 80 E ×4",
+      "nominal_kwh": 320.0,
+      "max_power_kw": 320.0,
+      "chemistry": "NMC",
+      "form_factor": "indoor_cabinet",
+      "source": "https://tesvolt.com/_media/05%20SERVICE/03%20Downloads/E-Serie/TS-I_HV_80__100_E/Datenblatt/RD.TI.075.E.en-US_3.pdf",
+      "source_note": "Four 80 kWh cabinets; datasheet scales 1–16 cabinets."
+    },
+    {
+      "id": "catl_enerone_plus_1p",
+      "manufacturer": "CATL",
+      "product_line": "EnerOne+ 1P (285 Ah)",
+      "nominal_kwh": 379.4,
+      "max_power_kw": 379.4,
+      "chemistry": "LFP",
+      "form_factor": "outdoor_rack",
+      "source": "https://7sun.eu/wp-content/uploads/2025/06/CATL-EnerOne-Datasheet.pdf",
+      "source_note": "Outdoor liquid-cooled rack, 379.4 kWh, 1P/1P charge-discharge."
+    },
+    {
+      "id": "catl_enerone_plus_05p",
+      "manufacturer": "CATL",
+      "product_line": "EnerOne+ 0.5P R08306P05L31",
+      "nominal_kwh": 407.34,
+      "max_power_kw": 203.67,
+      "chemistry": "LFP",
+      "form_factor": "outdoor_rack",
+      "source": "https://7sun.eu/wp-content/uploads/2025/06/CATL-EnerOne-Product-specification.pdf",
+      "source_note": "306 Ah cells, rated energy 407.34 kWh, rated power 203.67 kW."
+    },
+    {
+      "id": "sungrow_powerstack_st225_x2",
+      "manufacturer": "Sungrow",
+      "product_line": "PowerStack ST225 ×2",
+      "nominal_kwh": 458.0,
+      "max_power_kw": 220.0,
+      "chemistry": "LFP",
+      "form_factor": "outdoor_cabinet",
+      "source": "https://www.sungrowpower.com/en/products/c-i-energy-storage-system/b-st225kwh-110kw-2h",
+      "source_note": "Two paralleled PowerStack cabinets (side-by-side parallel is in the product brief)."
+    },
+    {
+      "id": "tesvolt_ts_i_hv_80_e_x8",
+      "manufacturer": "TESVOLT",
+      "product_line": "TS-I HV 80 E ×8",
+      "nominal_kwh": 640.0,
+      "max_power_kw": 640.0,
+      "chemistry": "NMC",
+      "form_factor": "indoor_cabinet",
+      "source": "https://tesvolt.com/_media/05%20SERVICE/03%20Downloads/E-Serie/TS-I_HV_80__100_E/Datenblatt/RD.TI.075.E.en-US_3.pdf",
+      "source_note": "Eight 80 kWh cabinets from the official scaling table."
+    },
+    {
+      "id": "huawei_luna2000_215_2s10_x3",
+      "manufacturer": "Huawei",
+      "product_line": "LUNA2000-215-2S10 ×3",
+      "nominal_kwh": 645.0,
+      "max_power_kw": 322.5,
+      "chemistry": "LFP",
+      "form_factor": "outdoor_cabinet",
+      "source": "https://solar.huawei.com/admin/asset/v1/pro/view/8459cfc0f20c4ecdbfcc5cbc93c0829d.pdf",
+      "source_note": "Three 215 kWh Smart String cabinets in parallel."
+    },
+    {
+      "id": "catl_enerone_plus_1p_x2",
+      "manufacturer": "CATL",
+      "product_line": "EnerOne+ 1P ×2",
+      "nominal_kwh": 758.8,
+      "max_power_kw": 758.8,
+      "chemistry": "LFP",
+      "form_factor": "outdoor_rack",
+      "source": "https://7sun.eu/wp-content/uploads/2025/06/CATL-EnerOne-Datasheet.pdf",
+      "source_note": "Two EnerOne+ 1P racks."
+    },
+    {
+      "id": "tesvolt_tps_e_20ft",
+      "manufacturer": "TESVOLT",
+      "product_line": "TPS-E 20 ft container",
+      "nominal_kwh": 1900.0,
+      "max_power_kw": 1900.0,
+      "chemistry": "NMC",
+      "form_factor": "container",
+      "source": "https://www.tesvolt.com/_media/06%20UNTERNEHMEN/01_Presse/2022/05-02/Datasheet_TPS-E_Container.pdf",
+      "source_note": "Max 1.9 MWh in a 20 ft ISO container; inner TS HV 90 modules are 1C."
+    },
+    {
+      "id": "tesla_megapack_2xl_2h",
+      "manufacturer": "Tesla",
+      "product_line": "Megapack 2 XL 2-hour C010/C011",
+      "nominal_kwh": 3854.0,
+      "max_power_kw": 1927.0,
+      "chemistry": "LFP",
+      "form_factor": "container",
+      "source": "https://cdn.enfsolar.com/z/pp/2026/8/0acc3r31i5h1/tesla-megapack-datasheet.pdf",
+      "source_note": "Datasheet Rev. 2.0: 1927 kW / 3854 kWh at 25 °C."
+    },
+    {
+      "id": "tesla_megapack_2xl_4h",
+      "manufacturer": "Tesla",
+      "product_line": "Megapack 2 XL 4-hour C010/C011",
+      "nominal_kwh": 3916.0,
+      "max_power_kw": 979.0,
+      "chemistry": "LFP",
+      "form_factor": "container",
+      "source": "https://cdn.enfsolar.com/z/pp/2026/8/0acc3r31i5h1/tesla-megapack-datasheet.pdf",
+      "source_note": "Datasheet Rev. 2.0: 979 kW / 3916 kWh at 25 °C."
+    },
+    {
+      "id": "tesvolt_tps_e_40ft",
+      "manufacturer": "TESVOLT",
+      "product_line": "TPS-E 40 ft container",
+      "nominal_kwh": 4200.0,
+      "max_power_kw": 1900.0,
+      "chemistry": "NMC",
+      "form_factor": "container",
+      "source": "https://www.tesvolt.com/_media/06%20UNTERNEHMEN/01_Presse/2022/05-02/Datasheet_TPS-E_Container.pdf",
+      "source_note": "Max 4.2 MWh in a 40 ft container. Power is not a single SKU rating; 1.9 MW is aligned with the 20 ft 1C racking scale and the published 45 ft example (3.84 MWh / 1.7 MW)."
+    }
+  ]
+}

@@ -105,30 +105,42 @@ class BatterySimPiece(BasePiece):
 
             sim = self._load_simulate_module()
             cfg = yaml.safe_load(scenario_path.read_text(encoding="utf-8")) or {}
+            sim._apply_system_scope(cfg)
+            sim._sync_scope_flags_to_sizes(cfg)
             df = sim.load_consumption_csv(csv_path)
             solar_df = pd.read_csv(solar_path)
             if "pv_kw" not in solar_df.columns:
                 raise ValueError("virtual_solar_csv must contain pv_kw column")
-            solar_series = pd.to_numeric(solar_df["pv_kw"], errors="coerce").fillna(0.0).clip(lower=0.0)
-            if len(solar_series) != len(df):
-                raise ValueError(
-                    f"virtual_solar_csv rows ({len(solar_series)}) must match load_csv rows ({len(df)})"
+            if "datetime" in solar_df.columns:
+                solar_df = solar_df.copy()
+                solar_df["datetime"] = pd.to_datetime(solar_df["datetime"], errors="coerce")
+                solar_df = solar_df.dropna(subset=["datetime"]).drop_duplicates(
+                    subset=["datetime"], keep="first"
                 )
+                aligned = pd.DataFrame({"datetime": pd.to_datetime(df["datetime"])}).merge(
+                    solar_df, on="datetime", how="left", sort=False
+                )
+                solar_df = aligned
+            elif len(solar_df) != len(df):
+                raise ValueError(
+                    f"virtual_solar_csv rows ({len(solar_df)}) must match load_csv rows ({len(df)})"
+                )
+            solar_series = pd.to_numeric(solar_df["pv_kw"], errors="coerce").fillna(0.0).clip(lower=0.0)
 
             # The forecast is produced before sizing runs, so it carries the
             # reference array size. Dispatching it unscaled would simulate a
             # different plant than the one being costed.
             sized_kwp = float((cfg.get("pv") or {}).get("installed_kwp", 0.0) or 0.0)
+            dt_h = sim.infer_timestep_hours(df)
             if "pv_kw_per_kwp" in solar_df.columns and sized_kwp > 0:
                 per_kwp = (
                     pd.to_numeric(solar_df["pv_kw_per_kwp"], errors="coerce")
                     .fillna(0.0)
                     .clip(lower=0.0)
+                    .to_numpy(dtype=float)
                 )
-                solar_series = per_kwp * sized_kwp
+                solar_series = pd.Series(np.asarray(per_kwp, dtype=float) * sized_kwp)
                 _log(f"Rescaled AI forecast to the sized array: {sized_kwp:.1f} kWp")
-
-            dt_h = sim.infer_timestep_hours(df)
             price = sim.build_price_series(df, cfg).values.astype(float)
             load_kw = df["load_kw"].astype(float).values
             pv_kw = solar_series.astype(float).values
@@ -147,7 +159,10 @@ class BatterySimPiece(BasePiece):
             # dispatched as if PV cost 0.12 EUR/kWh and battery throughput 0.02,
             # regardless of the CAPEX, yield and cycle life in the scenario.
             installed_kwp = float(pv_cfg.get("installed_kwp", 0.0))
-            yield_kwp = float(pv_cfg.get("yield_kwh_per_kwp_year", 1000.0))
+            if installed_kwp > 0:
+                yield_kwp = sim.annual_kwh_per_kwp_from_profile(pv_kw / installed_kwp, dt_h)
+            else:
+                yield_kwp = 0.0
             years = int(analysis.get("amortization_years", 12))
             discount_rate = float(analysis.get("discount_rate", 0.08))
             use_pv_flag = bool(cfg.get("use_pv", True))
@@ -172,10 +187,12 @@ class BatterySimPiece(BasePiece):
                 use_pv=use_pv_flag,
                 use_bat=use_bat_flag,
             )
+            wear = sim.battery_dispatch_wear_eur_per_kwh(bat)
             _log(
-                "Levelized economics: pv_lcoe={pv_lcoe_eur_per_kwh:.4f} EUR/kWh, "
-                "battery_throughput={battery_marginal_eur_per_kwh_throughput:.4f} EUR/kWh".format(
-                    **levelized
+                "Levelized economics: pv_lcoe={pv_lcoe:.4f} EUR/kWh, "
+                "dispatch_wear={wear:.4f} EUR/kWh (CAPEX stays in NPV)".format(
+                    pv_lcoe=float(levelized["pv_lcoe_eur_per_kwh"]),
+                    wear=wear,
                 )
             )
             strategy_thresholds = sim.load_battery_strategy_thresholds(strategy_path)
@@ -196,12 +213,13 @@ class BatterySimPiece(BasePiece):
                 "mrk_contract_kw": float(mrk.get("contract_kw", 0.0)),
                 "feed_in_eur_per_kwh": float(en.get("feed_in_surplus_eur_per_kwh", 0.05)),
                 "pv_lcoe_eur_per_kwh": float(levelized["pv_lcoe_eur_per_kwh"]),
-                "battery_throughput_eur_per_kwh": float(
-                    levelized["battery_marginal_eur_per_kwh_throughput"]
-                ),
+                "battery_throughput_eur_per_kwh": wear,
+                "distribution_eur_per_kwh": sim.distribution_tariff_eur_per_kwh(cfg),
                 "max_fraction_from_grid_charge": float(bat.get("max_fraction_capacity_from_grid_charge", 0.72)),
                 "excess_penalty_eur_per_kw": float(mrk.get("excess_peak_penalty_eur_per_kw", 0.0)),
+                "fee_eur_per_kw_month": float(mrk.get("fee_eur_per_kw_month", 0.0)),
                 "peak_shaving_reserve_pct": float(bat.get("peak_shaving_reserve_pct", 30.0)),
+                "timestamps": df["datetime"],
                 **dispatch_kwargs,
             }
 

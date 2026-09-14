@@ -37,6 +37,30 @@ def install_domino_stub() -> None:
     install()
 
 
+def _uncache_project_modules() -> None:
+    """Drop in-process piece imports so a local web rerun picks up code edits.
+
+    The form server is one long-lived process. Without this, the first heatmap
+    (or dashboard) import is frozen for every later submit.
+    """
+    root = str(ROOT.resolve())
+    for key, mod in list(sys.modules.items()):
+        file = getattr(mod, "__file__", None) or ""
+        if not file:
+            continue
+        try:
+            path = str(Path(file).resolve())
+        except (OSError, RuntimeError):
+            continue
+        if not path.startswith(root):
+            continue
+        rel = path[len(root):].lstrip("\\/").replace("\\", "/")
+        if rel.startswith("pieces/local_compat"):
+            continue
+        if rel.startswith(("pieces/", "webapp/", "scripts/")):
+            sys.modules.pop(key, None)
+
+
 def topological_order(workflow: dict[str, dict]) -> list[str]:
     incoming = {name: set() for name in workflow}
     for name, spec in workflow.items():
@@ -124,6 +148,7 @@ def run_workflow(
     so a web UI can show the same run the CLI prints, without scraping stdout.
     """
     install_domino_stub()
+    _uncache_project_modules()
     if str(ROOT / "scripts") not in sys.path:
         sys.path.insert(0, str(ROOT / "scripts"))
     from build_workflow import WORKFLOW  # noqa: E402

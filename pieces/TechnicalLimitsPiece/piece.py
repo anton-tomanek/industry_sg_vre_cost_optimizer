@@ -19,6 +19,11 @@ except ModuleNotFoundError:
     except ModuleNotFoundError:
         od = None
 
+try:
+    from common.capex_budget import apply_capex_axis_budgets, capex_limit_notes
+except ModuleNotFoundError:
+    from pieces.common.capex_budget import apply_capex_axis_budgets, capex_limit_notes
+
 
 def _load_consumption_csv(path: Path | str) -> pd.DataFrame:
     p = Path(path)
@@ -60,7 +65,6 @@ def _technical_bounds_kwp_kwh(cfg: dict[str, Any], df: pd.DataFrame, dt_h: float
     bat_ref = cfg.get("battery") or {}
     load = df["load_kw"].astype(float)
     annual_mwh = _estimate_annual_load_mwh(load, dt_h)
-    yield_kwp = float(pv_ref.get("yield_kwh_per_kwp_year", 1000.0))
 
     roof = float(c.get("max_roof_area_m2") or 0)
     ground = float(c.get("max_ground_area_m2") or 0)
@@ -83,9 +87,9 @@ def _technical_bounds_kwp_kwh(cfg: dict[str, Any], df: pd.DataFrame, dt_h: float
     notes: list[str] = []
 
     if max_kwp <= 1e-6:
-        base_kwp = (annual_mwh * 1000.0 / max(yield_kwp, 1.0)) if annual_mwh > 1e-6 else 300.0
+        base_kwp = annual_mwh if annual_mwh > 1e-6 else 300.0
         max_kwp = max(100.0, base_kwp * 1.8)
-        notes.append("No area limit for PV: estimated from annual load and yield.")
+        notes.append("No area limit for PV: estimated from annual load.")
     else:
         notes.append("PV area limit applied.")
 
@@ -98,21 +102,31 @@ def _technical_bounds_kwp_kwh(cfg: dict[str, Any], df: pd.DataFrame, dt_h: float
         max_kwh = min(max_kwh, float(c["max_battery_kwh"]))
         notes.append("Hard cap from max_battery_kwh applied.")
 
-    max_capex = float(c.get("max_capex_eur") or 0.0)
-    eur_kwp = float(pv_ref.get("specific_capex_eur_per_kwp", 800.0))
-    eur_kwh = float(bat_ref.get("specific_capex_eur_per_kwh", 400.0))
-    if max_capex > 1e-6:
-        max_kwp = min(max_kwp, max_capex / max(eur_kwp, 1e-9))
-        max_kwh = min(max_kwh, max_capex / max(eur_kwh, 1e-9))
-        notes.append("CAPEX cap narrowed upper bounds.")
-
     if c.get("roof_load_limit_kg_per_m2") is not None and roof > 1e-6 and mount != "ground":
         max_kwp = min(max_kwp, roof * kwp_per_m2 * 0.92)
         notes.append("Reduced max PV due to roof load limit factor (0.92).")
 
+    eur_kwp = float(pv_ref.get("specific_capex_eur_per_kwp", 800.0))
+    eur_kwh = float(bat_ref.get("specific_capex_eur_per_kwh", 400.0))
+    cap = apply_capex_axis_budgets(
+        c,
+        max_kwp=max_kwp,
+        max_kwh=max_kwh,
+        eur_per_kwp=eur_kwp,
+        eur_per_kwh=eur_kwh,
+    )
+    notes.extend(capex_limit_notes(cap, slovak=False))
+
     return {
         "max_kwp": max(0.0, max_kwp),
         "max_kwh": max(0.0, max_kwh),
+        "max_kwp_budget": cap["max_kwp_budget"],
+        "max_kwh_budget": cap["max_kwh_budget"],
+        "capex_mode": cap.get("capex_mode"),
+        "max_total_capex_eur": cap.get("max_total_capex_eur"),
+        "max_capex_eur": cap.get("max_capex_eur") or 0.0,
+        "max_pv_capex_eur": cap.get("max_pv_capex_eur"),
+        "max_battery_capex_eur": cap.get("max_battery_capex_eur"),
         "annual_load_mwh_est": round(annual_mwh, 3),
         "notes": notes,
     }

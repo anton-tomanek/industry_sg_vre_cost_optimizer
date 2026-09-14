@@ -21,6 +21,10 @@ class InputModel(RunIdInputMixin):
         ),
     )
     technical_limits_json: str = Field(description="Path to technical limits json")
+    battery_strategy_recommendation_json: Optional[str] = Field(
+        default=None,
+        description="Charge/discharge thresholds from BatteryStrategyOptimizerPiece, used while scoring sizes.",
+    )
 
 
 class SecretsModel(OneDataSecretsModel):

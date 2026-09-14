@@ -83,9 +83,16 @@ class SizingOptimizationPiece(BasePiece):
                 df,
                 reference_kwp=float((cfg.get("pv") or {}).get("installed_kwp", 0.0) or 0.0),
             )
+            strategy_thresholds = sim.load_battery_strategy_thresholds(
+                getattr(input_data, "battery_strategy_recommendation_json", None)
+            )
             _log(
                 "PV profile for the size sweep: "
                 + ("AI forecast" if pv_profile is not None else "synthetic fallback")
+            )
+            _log(
+                "Battery strategy thresholds: "
+                + (str(strategy_thresholds) if strategy_thresholds else "fallback quantiles in dispatch")
             )
 
             if mode == "auto":
@@ -94,6 +101,7 @@ class SizingOptimizationPiece(BasePiece):
                     df,
                     bounds_override=technical_limits,
                     pv_profile_per_kwp=pv_profile,
+                    battery_strategy_thresholds=strategy_thresholds,
                 )
             _log(f"Resolved selection_mode={mode}, rows={len(df)}")
         except Exception as exc:
@@ -112,6 +120,7 @@ class SizingOptimizationPiece(BasePiece):
                 {
                     "selection_mode": mode,
                     "technical_limits_applied": technical_limits,
+                    "battery_strategy_thresholds": strategy_thresholds,
                     "auto_optimization": auto_log,
                 },
                 indent=2,

@@ -248,7 +248,7 @@ class Handler(BaseHTTPRequestHandler):
                 '<div style="position:sticky;top:0;z-index:20;background:#163a56;color:#fff;'
                 'padding:8px 16px;font:13px/1.4 sans-serif;display:flex;justify-content:space-between;gap:12px;">'
                 '<span>UC3.2. SEED</span>'
-                '<a href="/" style="color:#9ad4ef">Nový výpočet</a></div>'
+                '<a href="/" style="color:#9ad4ef" data-i18n="nav.new">Nový výpočet</a></div>'
             ).encode("utf-8")
             if b"<body>" in html:
                 html = html.replace(b"<body>", b"<body>" + banner, 1)

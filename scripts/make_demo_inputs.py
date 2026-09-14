@@ -87,7 +87,6 @@ def build_scenario(annual_mwh: float, peak_kw: float) -> dict:
             "installed_kwp": 600.0,
             "panel_tilt": 25.0,
             "azimuth": 180.0,
-            "yield_kwh_per_kwp_year": 1050.0,
             "specific_capex_eur_per_kwp": 720.0,
             "om_eur_per_kwp_year": 11.0,
             "degradation_pct_per_year": 0.45,
@@ -111,7 +110,7 @@ def build_scenario(annual_mwh: float, peak_kw: float) -> dict:
         },
         "energy": {
             "feed_in_surplus_eur_per_kwh": 0.045,
-            "distribution_eur_per_kwh": 0.041,
+            "distribution_eur_per_kwh": 0.045,
         },
         "analysis": {
             "amortization_years": 15,
@@ -132,6 +131,8 @@ def build_scenario(annual_mwh: float, peak_kw: float) -> dict:
             "constraints": {
                 "max_roof_area_m2": 7800.0,
                 "max_battery_area_m2": 160.0,
+                "capex_mode": "joint",
+                "max_total_capex_eur": 1_400_000.0,
                 "max_capex_eur": 1_400_000.0,
                 "roof_load_limit_kg_per_m2": 25.0,
                 "installation": {

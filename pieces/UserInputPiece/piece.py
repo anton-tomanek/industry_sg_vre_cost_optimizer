@@ -225,17 +225,19 @@ class UserInputPiece(BasePiece):
         prod_cfg = scenario.get("production") or {}
         gap_repair_enabled = bool(prod_cfg.get("gap_repair_enabled", True))
 
-        # Case A: load_csv already contains both load_kw and price_eur_per_kwh.
+        # Load file may carry odber as load_kw or prikon A/B/C, and optional prices.
         df = self._normalize_datetime_column(self._read_csv_auto(load_csv))
         cols = [c.strip().lower().replace(" ", "_") for c in df.columns]
         df.columns = cols
         df = self._coerce_price_column(df)
-        has_load_kw = "load_kw" in df.columns
+        used = self._power_columns(list(df.columns))
+        df["load_kw"] = self._build_load_kw(df)
+        _log(f"Odber = súčet stĺpcov {used or ['load_kw']}; median={float(df['load_kw'].median()):.2f} kW")
         has_price = self._has_usable_prices(df)
         merge_mode = "single_csv"
         price_source = "load_csv"
         overlap_rows = None
-        if has_load_kw and has_price:
+        if has_price:
             merged = df.copy()
             merged["load_kw"] = pd.to_numeric(merged["load_kw"], errors="coerce").fillna(0.0)
             merged["price_eur_per_kwh"] = pd.to_numeric(merged["price_eur_per_kwh"], errors="coerce")
@@ -245,13 +247,9 @@ class UserInputPiece(BasePiece):
             merged_path = out_dir / "load_and_prices_merged.csv"
             merged.to_csv(merged_path, index=False)
             merge_mode = "single_csv_normalized"
+            _log("Ceny vzaté zo súboru odberu.")
         else:
-            load_df = df.copy()
-            used = self._power_columns(list(load_df.columns))
-            load_df["load_kw"] = self._build_load_kw(load_df)
-            _log(f"Odber = súčet stĺpcov {used or ['load_kw']}; median={float(load_df['load_kw'].median()):.2f} kW")
-            load_df = load_df[["datetime", "load_kw"]]
-            load_df = self._collapse_duplicate_timestamps(load_df)
+            load_df = self._collapse_duplicate_timestamps(df[["datetime", "load_kw"]].copy())
 
             if prices_csv is not None and prices_csv.is_file():
                 p = self._normalize_datetime_column(self._read_csv_auto(prices_csv))

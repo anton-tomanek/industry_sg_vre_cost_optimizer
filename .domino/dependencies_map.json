@@ -5,35 +5,35 @@
             "requirements_file": "requirements_0.txt"
         },
         "pieces": [
-            "ShmuCalibrationPiece",
-            "SizingOptimizationPiece",
-            "PVOUTPredictionModelTrainPiece",
             "BatterySimPiece",
-            "UserInputPiece",
-            "PVOUTErrorCorrectionModelTrainPiece",
-            "DashboardPiece",
-            "PvoutModelFeatureSelectPiece",
-            "CatalogSyncPiece",
-            "KPIPiece",
-            "DataNormalizationPiece",
-            "InferencePiece",
-            "SimulatePiece",
             "BatteryStrategyOptimizerPiece",
-            "TechnicalLimitsPiece",
             "CatalogRankerPiece",
-            "PvoutToVirtualSolarPiece",
+            "CatalogSyncPiece",
+            "DashboardPiece",
+            "DataNormalizationPiece",
+            "DataPreprocessingPiece",
+            "InferencePiece",
+            "InvestmentEvalPiece",
+            "KPIPiece",
             "ModelDeciderPiece",
             "OpenMeteoPVDataPiece",
-            "InvestmentEvalPiece",
-            "SizingHeatmapPiece",
+            "PVOUTErrorCorrectionModelTrainPiece",
+            "PVOUTPredictionModelTrainPiece",
+            "PvoutModelFeatureSelectPiece",
             "PvoutStagedInferenceSpecPiece",
-            "DataPreprocessingPiece"
+            "PvoutToVirtualSolarPiece",
+            "ShmuCalibrationPiece",
+            "SimulatePiece",
+            "SizingHeatmapPiece",
+            "SizingOptimizationPiece",
+            "TechnicalLimitsPiece",
+            "UserInputPiece"
         ],
         "secrets": [
             "onedata_onezone_host",
             "onedata_output_dir",
             "onedata_token"
         ],
-        "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.45-group0"
+        "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.46-group0"
     }
 }

@@ -21,6 +21,10 @@ class InputModel(RunIdInputMixin):
         default=None,
         description="Upper bounds for the sweep. Falls back to bounds derived from the load.",
     )
+    battery_strategy_recommendation_json: Optional[str] = Field(
+        default=None,
+        description="Charge/discharge thresholds from BatteryStrategyOptimizerPiece, used for every cell.",
+    )
     pv_steps: int = Field(
         default=12,
         description="Number of PV sizes on the x axis.",

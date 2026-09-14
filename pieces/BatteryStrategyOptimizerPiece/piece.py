@@ -62,11 +62,30 @@ class BatteryStrategyOptimizerPiece(BasePiece):
             cfg = yaml.safe_load(scenario_path.read_text(encoding="utf-8")) or {}
             df = sim.load_consumption_csv(csv_path)
             price = sim.build_price_series(df, cfg).values.astype(float)
+            bat = cfg.get("battery") or {}
+
+            def _pick(key: str, auto: float) -> float:
+                raw = bat.get(key)
+                if raw is None or str(raw).strip() == "":
+                    return auto
+                try:
+                    val = float(raw)
+                except (TypeError, ValueError):
+                    return auto
+                return round(val, 6) if val > 0 else auto
+
             rec = {
-                "charge_below_eur_per_kwh": round(float(np.quantile(price, 0.30)), 6),
-                "discharge_above_eur_per_kwh": round(float(np.quantile(price, 0.75)), 6),
-                "expensive_hour_threshold_eur_per_kwh": round(float(np.percentile(price, 70.0)), 6),
-                "strategy_note": "Thresholds aligned to dispatch logic in SimulatePiece.",
+                "charge_below_eur_per_kwh": _pick(
+                    "charge_below_eur_per_kwh", round(float(np.quantile(price, 0.30)), 6)
+                ),
+                "discharge_above_eur_per_kwh": _pick(
+                    "discharge_above_eur_per_kwh", round(float(np.quantile(price, 0.75)), 6)
+                ),
+                "expensive_hour_threshold_eur_per_kwh": _pick(
+                    "expensive_hour_threshold_eur_per_kwh",
+                    round(float(np.percentile(price, 70.0)), 6),
+                ),
+                "strategy_note": "Thresholds from the form when set, otherwise percentiles of the price series.",
             }
             _log(f"Computed thresholds from rows={len(df)}")
         except Exception as exc:

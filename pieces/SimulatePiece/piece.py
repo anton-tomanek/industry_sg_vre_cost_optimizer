@@ -27,6 +27,21 @@ except ModuleNotFoundError:
     except ModuleNotFoundError:
         od = None
 
+try:
+    from common.capex_budget import (
+        apply_capex_axis_budgets,
+        capex_limit_notes,
+        configuration_over_budget,
+        copy_capex_bound_fields,
+    )
+except ModuleNotFoundError:
+    from pieces.common.capex_budget import (
+        apply_capex_axis_budgets,
+        capex_limit_notes,
+        configuration_over_budget,
+        copy_capex_bound_fields,
+    )
+
 # --- battery strategy (voliteľné prahy z BatteryStrategyOptimizerPiece) ---
 
 
@@ -102,12 +117,8 @@ def build_price_series(df: pd.DataFrame, cfg: dict) -> pd.Series:
 # --- FVE (syntetický profil) ---
 
 
-def synthetic_pv_kw(
-    dt: pd.Series,
-    installed_kwp: float,
-    *,
-    yield_kwh_per_kwp_year: float = 1000.0,
-) -> pd.Series:
+def synthetic_pv_kw(dt: pd.Series, installed_kwp: float) -> pd.Series:
+    """Last-resort PV shape when the AI forecast is missing. Not a user yield."""
     if installed_kwp <= 0:
         return pd.Series(0.0, index=dt.index, name="pv_kw")
 
@@ -117,18 +128,20 @@ def synthetic_pv_kw(
     seasonal = 0.85 + 0.15 * np.cos(2 * math.pi * (day_of_year - 172) / 365.0)
     solar_elev = np.clip(np.sin((hours - 6.0) / 12.0 * np.pi), 0.0, 1.0) ** 1.2
     raw = np.asarray(seasonal * solar_elev * installed_kwp, dtype=float)
-
-    diffs = t.to_series().diff().dt.total_seconds().median()
-    dt_h = float(diffs) / 3600.0 if pd.notna(diffs) and diffs > 0 else 0.25
-    energy_raw = float(np.sum(raw * dt_h))
-    # Scale target production to the covered sample period.
-    # Without this, short samples (e.g. 1 day) are incorrectly scaled to full-year generation.
-    sample_hours = max(float(len(raw)) * dt_h, dt_h)
-    sample_year_fraction = sample_hours / 8760.0
-    target_e = yield_kwh_per_kwp_year * installed_kwp * sample_year_fraction
-    if energy_raw > 1e-6:
-        raw = raw * (target_e / energy_raw)
     return pd.Series(np.clip(raw, 0.0, installed_kwp * 1.15), index=dt.index, name="pv_kw")
+
+
+def annual_kwh_per_kwp_from_profile(pv_per_kwp: np.ndarray | None, dt_h: float) -> float:
+    """Year-equivalent specific yield of a 1 kWp series (AI forecast or fallback)."""
+    if pv_per_kwp is None or dt_h <= 0:
+        return 0.0
+    arr = np.asarray(pv_per_kwp, dtype=float)
+    if len(arr) == 0:
+        return 0.0
+    hours = float(len(arr)) * float(dt_h)
+    if hours <= 1e-9:
+        return 0.0
+    return float(np.sum(arr) * dt_h) * (8760.0 / hours)
 
 
 def load_pv_profile_per_kwp(
@@ -174,6 +187,36 @@ def load_pv_profile_per_kwp(
     if len(series) != len(df):
         return None
     return series.fillna(0.0).clip(lower=0.0).to_numpy(dtype=float)
+
+
+def plant_om_eur_per_year(cfg: dict[str, Any] | None, kwp: float, kwh: float) -> float:
+    pv = (cfg or {}).get("pv") or {}
+    bat = (cfg or {}).get("battery") or {}
+    om = float(pv.get("om_eur_per_kwp_year", 0.0) or 0.0) * max(0.0, float(kwp))
+    om += float(bat.get("om_eur_per_kwh_year", 0.0) or 0.0) * max(0.0, float(kwh))
+    return float(om)
+
+
+def plant_degradation_frac(cfg: dict[str, Any] | None) -> float:
+    try:
+        pct = float(((cfg or {}).get("pv") or {}).get("degradation_pct_per_year", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+    return float(min(0.05, max(0.0, pct / 100.0)))
+
+
+def battery_dispatch_wear_eur_per_kwh(bat_cfg: dict[str, Any] | None) -> float:
+    """Wear / round-trip friction used inside dispatch — not CAPEX recovery.
+
+    Putting the battery annuity into the dispatch threshold (~0.11 €/kWh)
+    meant the pack almost never cycled, so the optimiser always picked 0 kWh.
+    CAPEX belongs in NPV, not in the hourly bid.
+    """
+    try:
+        wear = float((bat_cfg or {}).get("throughput_cost_eur_per_kwh", 0.02) or 0.02)
+    except (TypeError, ValueError):
+        wear = 0.02
+    return float(min(0.05, max(0.0, wear)))
 
 
 # --- batéria (ekonomický dispatch: LCOE FVE vs sieť vs náklad kWh z batérie) ---
@@ -246,6 +289,118 @@ def compute_levelized_economics(
     }
 
 
+def decide_mrk_peak_reserve(
+    net_load_kw: np.ndarray,
+    dt_h: float,
+    *,
+    energy_kwh: float,
+    max_c_rate: float,
+    eta_c: float,
+    eta_d: float,
+    mrk_contract_kw: float,
+    peak_shaving_reserve_pct: float,
+    excess_penalty_eur_per_kw: float,
+    fee_eur_per_kw_month: float = 0.0,
+    wear: float = 0.02,
+    price_low: float = 0.0,
+    price_high: float = 0.0,
+    timestamps: Any = None,
+) -> dict[str, Any]:
+    """Hold an energy reserve for MRK peaks only when clipping them pays.
+
+    The form value is a *cap* (how much of the pack we are willing to lock),
+    not a mandate. Dispatch already clips import when the interval is over the
+    contract; the reserve only withholds that slice from day-ahead arbitrage
+    so the pack is not empty when a peak arrives.
+
+    Benefit is the period-scaled penalty plus monthly MRK fee on the kW the
+    reserved energy can actually shave in months where (load − PV) exceeds
+    the contract. Cost is the arbitrage spread that slice of energy would
+    otherwise cycle. If there is no overflow, or the spread is worth more
+    than the peak charges, the reserve stays at 0 kWh.
+    """
+    requested_pct = float(np.clip(float(peak_shaving_reserve_pct or 0.0), 0.0, 95.0))
+    e_kwh = float(energy_kwh or 0.0)
+    contract = float(mrk_contract_kw or 0.0)
+    empty = {
+        "enabled": False,
+        "reason": "off_no_request",
+        "requested_pct": requested_pct,
+        "reserve_kwh": 0.0,
+        "overflow_months": 0,
+        "max_overflow_kw": 0.0,
+        "shave_kw": 0.0,
+        "benefit_eur_year": 0.0,
+        "cost_eur_year": 0.0,
+    }
+    if requested_pct <= 1e-9 or e_kwh <= 1e-6:
+        return empty
+    if contract <= 1e-6:
+        return {**empty, "reason": "off_no_contract"}
+
+    net_pos = np.maximum(np.asarray(net_load_kw, dtype=float), 0.0)
+    monthly_peaks: list[float]
+    if timestamps is not None and len(np.asarray(timestamps)) == len(net_pos) and len(net_pos) > 0:
+        ts = pd.to_datetime(pd.Series(timestamps), errors="coerce")
+        dfp = pd.DataFrame({"p": net_pos, "ts": ts}).dropna(subset=["ts"])
+        if dfp.empty:
+            monthly_peaks = [float(net_pos.max())]
+        else:
+            monthly_peaks = (
+                dfp.groupby(dfp["ts"].dt.to_period("M"))["p"].max().astype(float).tolist()
+            )
+    else:
+        monthly_peaks = [float(net_pos.max())] if len(net_pos) else []
+    if not monthly_peaks:
+        return {**empty, "reason": "off_no_overflow"}
+
+    pmax = max(0.0, float(max_c_rate) * e_kwh)
+    reserve_kwh = e_kwh * requested_pct / 100.0
+    shave_cap = min(pmax, reserve_kwh * float(eta_d) / max(float(dt_h), 1e-9))
+    n_over = 0
+    max_overflow = 0.0
+    period_penalty = 0.0
+    period_fee = 0.0
+    for peak in monthly_peaks:
+        overflow = max(0.0, float(peak) - contract)
+        if overflow <= 1e-6:
+            continue
+        n_over += 1
+        max_overflow = max(max_overflow, overflow)
+        shave = min(shave_cap, overflow)
+        period_penalty += float(excess_penalty_eur_per_kw or 0.0) * shave
+        period_fee += float(fee_eur_per_kw_month or 0.0) * shave
+    if n_over <= 0:
+        return {
+            **empty,
+            "reason": "off_no_overflow",
+            "requested_pct": requested_pct,
+        }
+
+    n_months = max(1, len(monthly_peaks))
+    year_scale = 12.0 / float(n_months)
+    benefit_year = (period_penalty + period_fee) * year_scale
+
+    spread = max(0.0, float(price_high) - float(price_low))
+    rt = max(1e-6, float(eta_c) * float(eta_d))
+    net_spread = max(0.0, spread * rt - max(0.0, float(wear)))
+    cycles_per_day = 0.45 if net_spread > 0.01 else 0.08
+    missed_cycles_year = min(280.0, 365.0 * cycles_per_day)
+    cost_year = reserve_kwh * missed_cycles_year * net_spread
+    enabled = benefit_year > cost_year + 1.0
+    return {
+        "enabled": bool(enabled),
+        "reason": "on_worth" if enabled else "off_not_worth",
+        "requested_pct": round(requested_pct, 2),
+        "reserve_kwh": round(reserve_kwh if enabled else 0.0, 2),
+        "overflow_months": int(n_over),
+        "max_overflow_kw": round(max_overflow, 2),
+        "shave_kw": round(min(shave_cap, max_overflow), 2),
+        "benefit_eur_year": round(float(benefit_year), 2),
+        "cost_eur_year": round(float(cost_year), 2),
+    }
+
+
 def dispatch_battery(
     net_load_kw: np.ndarray,
     price: np.ndarray,
@@ -262,18 +417,23 @@ def dispatch_battery(
     battery_throughput_eur_per_kwh: float = 0.02,
     max_fraction_from_grid_charge: float = 0.72,
     excess_penalty_eur_per_kw: float = 0.0,
+    fee_eur_per_kw_month: float = 0.0,
     peak_shaving_reserve_pct: float = 30.0,
     price_low: float | None = None,
     price_high: float | None = None,
     price_expensive: float | None = None,
+    distribution_eur_per_kwh: float = 0.0,
+    timestamps: Any = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Dvojkomorový model: energia z FVE (spv) vs. zo siete (sg).
     - Zo siete max. max_fraction_from_grid_charge kapacity – zvyšok rezerva na FVE a špičkové štiepenie MRK.
-    - Vybíjanie: MRK nad zmluvou; potom ak cena > efektívna hodnota v batérii; pri drahých hodinách (percentil) ešte boost.
+    - Uložené kWh z FVE stoja predaj do siete (feed-in), nie LCOE — to je utopený náklad.
+    - Vybíjanie: MRK nad zmluvou; potom keď nákup (DAM + distribúcia) stojí viac ako energia v batérii.
     - Nabíjanie zo siete: lacný kvantil + arbitráž vs. drahý + MRK headroom.
-    - Voliteľná rezerva SOC pre peak shaving sa drží len ak je ekonomicky opodstatnená
-      (očakávaná hodnota vyhnutia sa MRK penalizácii > náklad držanej energie).
+    - throughput je opotrebenie, nie anuita CAPEX (tá ide do NPV).
+    - Rezerva na špičky MRK sa drží len keď zrezanie prekročenia zmluvy
+      (penále + mesačný poplatok za kW) prevýši stratu z arbitráže.
     """
     n = len(net_load_kw)
     pmax = max(0.0, max_c_rate * energy_kwh)
@@ -288,6 +448,11 @@ def dispatch_battery(
     p_high = float(price_high) if price_high is not None else float(np.quantile(p, 0.75))
     p_exp = float(price_expensive) if price_expensive is not None else float(np.percentile(p, 70.0))
     p_med = float(np.median(p))
+    try:
+        dist = max(0.0, float(distribution_eur_per_kwh or 0.0))
+    except (TypeError, ValueError):
+        dist = 0.0
+    wear = max(0.0, float(battery_throughput_eur_per_kwh or 0.0))
     net_pos = np.maximum(np.asarray(net_load_kw, dtype=float), 0.0)
     charge_ceiling_kw = float(np.quantile(net_pos, 0.85)) if len(net_pos) else 0.0
     if mrk_contract_kw > 0.0:
@@ -300,12 +465,28 @@ def dispatch_battery(
     spv = max(0.0, soc_kwh0 - sg)
     max_sg = max_fraction_from_grid_charge * E
 
-    opp_kwh = max(feed_in_eur_per_kwh, pv_lcoe_eur_per_kwh) / max(eta_c, 1e-6)
-    peak_value_per_kwh = float(excess_penalty_eur_per_kw) / max(dt_h, 1e-9)
-    reserve_cost_per_kwh = opp_kwh + float(battery_throughput_eur_per_kwh)
-    expected_mrk_overflow = bool(np.any(net_pos > mrk_contract_kw + 1e-6)) if mrk_contract_kw > 0.0 else False
-    reserve_enabled = peak_value_per_kwh > reserve_cost_per_kwh and mrk_contract_kw > 0.0 and expected_mrk_overflow
-    reserve_kwh = E * float(np.clip(peak_shaving_reserve_pct, 0.0, 95.0)) / 100.0 if reserve_enabled else 0.0
+    # LCOE is sunk once the array is built. Stored surplus only forgoes feed-in.
+    _ = pv_lcoe_eur_per_kwh
+    opp_kwh = max(0.0, float(feed_in_eur_per_kwh)) / max(eta_c, 1e-6)
+    reserve_decision = decide_mrk_peak_reserve(
+        net_load_kw,
+        dt_h,
+        energy_kwh=E,
+        max_c_rate=max_c_rate,
+        eta_c=eta_c,
+        eta_d=eta_d,
+        mrk_contract_kw=mrk_contract_kw,
+        peak_shaving_reserve_pct=peak_shaving_reserve_pct,
+        excess_penalty_eur_per_kw=excess_penalty_eur_per_kw,
+        fee_eur_per_kw_month=fee_eur_per_kw_month,
+        wear=wear,
+        price_low=p_low,
+        price_high=p_high,
+        timestamps=timestamps,
+    )
+    dispatch_battery.last_peak_reserve = reserve_decision
+    reserve_enabled = bool(reserve_decision.get("enabled"))
+    reserve_kwh = float(reserve_decision.get("reserve_kwh") or 0.0)
     value_eur = spv * opp_kwh + sg * (p_med / max(eta_c, 1e-6))
 
     def _total_kwh() -> float:
@@ -344,17 +525,18 @@ def dispatch_battery(
         dis_cap = _dis_cap_kw(s, E, eta_d, dt_h, pmax)
         over_mrk = max(0.0, net - mrk_contract_kw)
         avg_eur = value_eur / max(soc_k, 1e-9)
-        thr = avg_eur / max(eta_d, 1e-9) + battery_throughput_eur_per_kwh
+        thr = avg_eur / max(eta_d, 1e-9) + wear
         above_reserve_kwh = max(0.0, soc_k - reserve_kwh)
         dis_cap_above_reserve = min(dis_cap, above_reserve_kwh * max(eta_d, 1e-9) / max(dt_h, 1e-9))
+        import_unit = pr + dist
 
         want_dis = 0.0
         if over_mrk > 1e-6:
             want_dis = max(want_dis, min(over_mrk, dis_cap))
-        if pr >= thr and soc_k > 1e-6:
-            want_dis = max(want_dis, min(net * 0.55, dis_cap_above_reserve))
+        if import_unit >= thr and soc_k > 1e-6:
+            want_dis = max(want_dis, min(net, dis_cap_above_reserve))
         if pr >= p_exp and soc_k > 0.08 * E:
-            want_dis = max(want_dis, min(net * 0.45, dis_cap_above_reserve))
+            want_dis = max(want_dis, min(net, dis_cap_above_reserve))
 
         dis = float(np.clip(want_dis, 0.0, min(dis_cap, net)))
         kwh_out = dis * dt_h / max(eta_d, 1e-9)
@@ -369,7 +551,9 @@ def dispatch_battery(
         s_after = soc_k_after / E * 100.0
 
         ch = 0.0
-        arbitrage_ok = (pr / max(eta_c, 1e-9) + battery_throughput_eur_per_kwh) < (p_high / max(eta_d, 1e-9) - 0.008)
+        arbitrage_ok = ((pr + dist) / max(eta_c, 1e-9) + wear) < (
+            (p_high + dist) / max(eta_d, 1e-9) - 0.004
+        )
         room_grid = max(0.0, max_sg - sg)
         room_total = max(0.0, E - spv - sg)
         need_reserve_refill = reserve_enabled and soc_k_after < reserve_kwh
@@ -398,9 +582,27 @@ def dispatch_battery(
 # --- náklady ---
 
 
-def energy_cost_eur(grid_import_kw: pd.Series, price_eur_per_kwh: pd.Series, dt_h: float) -> float:
+def distribution_tariff_eur_per_kwh(cfg: dict[str, Any] | None) -> float:
+    """Network / distribution charge added on top of the commodity (DAM) price."""
+    try:
+        return max(0.0, float(((cfg or {}).get("energy") or {}).get("distribution_eur_per_kwh") or 0.0))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def energy_cost_eur(
+    grid_import_kw: pd.Series,
+    price_eur_per_kwh: pd.Series,
+    dt_h: float,
+    distribution_eur_per_kwh: float = 0.0,
+) -> float:
     e_kwh = grid_import_kw.clip(lower=0.0) * dt_h
-    return float((e_kwh * price_eur_per_kwh).sum())
+    try:
+        dist = max(0.0, float(distribution_eur_per_kwh or 0.0))
+    except (TypeError, ValueError):
+        dist = 0.0
+    unit = price_eur_per_kwh.astype(float) + dist
+    return float((e_kwh * unit).sum())
 
 
 def feed_in_revenue_eur(
@@ -472,19 +674,33 @@ def build_battery_soh_assessment(
     battery_cfg: dict[str, Any],
 ) -> dict[str, Any]:
     annual_cycles = _annual_cycles_from_period(equivalent_cycles_period, days_in_sample)
-    cal_life_years = float(battery_cfg.get("calendar_life_years", 10))
-    cycle_life_at_eol = float(battery_cfg.get("cycle_life_at_eol", 8000))
+    cal_raw = battery_cfg.get("calendar_life_years")
+    try:
+        cal_life_years = float(cal_raw) if cal_raw is not None and str(cal_raw).strip() != "" else None
+    except (TypeError, ValueError):
+        cal_life_years = None
+    if cal_life_years is not None and cal_life_years <= 0:
+        cal_life_years = None
+    cycle_life_at_eol = float(
+        battery_cfg.get("cycle_life_at_eol")
+        or battery_cfg.get("cycle_life")
+        or 8000
+    )
     eol_capacity_pct = float(battery_cfg.get("eol_capacity_pct", 80.0))
     life_by_cycles = cycle_life_at_eol / max(annual_cycles, 1e-9) if annual_cycles > 1e-9 else float("inf")
-    expected_life_years = min(cal_life_years, life_by_cycles)
-    cap_fade_per_year_cal = (100.0 - eol_capacity_pct) / max(cal_life_years, 1e-9)
+    if cal_life_years is not None:
+        expected_life_years = min(cal_life_years, life_by_cycles) if math.isfinite(life_by_cycles) else cal_life_years
+        cap_fade_per_year_cal = (100.0 - eol_capacity_pct) / max(cal_life_years, 1e-9)
+    else:
+        expected_life_years = life_by_cycles
+        cap_fade_per_year_cal = 0.0
     cap_fade_per_cycle = (100.0 - eol_capacity_pct) / max(cycle_life_at_eol, 1e-9)
     cap_fade_per_year_cycles = annual_cycles * cap_fade_per_cycle
     cap_fade_per_year_total = cap_fade_per_year_cal + cap_fade_per_year_cycles
     return {
         "equivalent_cycles_period": round(float(equivalent_cycles_period), 3),
         "annual_equivalent_cycles_est": round(float(annual_cycles), 2),
-        "calendar_life_years": round(cal_life_years, 2),
+        "calendar_life_years": round(cal_life_years, 2) if cal_life_years is not None else None,
         "cycle_life_at_eol": round(cycle_life_at_eol, 1),
         "end_of_life_capacity_pct": round(eol_capacity_pct, 2),
         "estimated_life_years_by_cycles": round(float(life_by_cycles), 2) if math.isfinite(life_by_cycles) else None,
@@ -735,6 +951,8 @@ def build_uncertainty_assessment(
     base_sav = (float(base["total_operating_eur"]) - float(optimized["total_operating_eur"])) * ann
     years = int(bundle.get("years", 12))
     dr = float(bundle.get("discount_rate", 0.08))
+    annual_om = float(bundle.get("annual_om_eur") or 0.0)
+    deg = float(bundle.get("degradation_frac") or 0.0)
 
     if base_sav <= 0 or capex <= 0:
         return {
@@ -757,12 +975,19 @@ def build_uncertainty_assessment(
     # EPC tender spread, skewed upward because overruns are more common.
     capex_factor = rng.lognormal(mean=0.01, sigma=0.07, size=iterations)
 
-    savings = base_sav * yield_factor * price_factor * performance_factor
+    savings_gross = base_sav * yield_factor * price_factor * performance_factor
+    savings = savings_gross - annual_om
     capexes = capex * capex_factor
 
     paybacks = np.where(savings > 1e-9, capexes / np.maximum(savings, 1e-9), np.inf)
-    annuity = (1.0 - (1.0 + dr) ** -years) / dr if dr > 0 else float(years)
-    npvs = -capexes + savings * annuity
+    annuity_om = (1.0 - (1.0 + dr) ** -years) / dr if dr > 0 else float(years)
+    fade = float(min(0.05, max(0.0, deg)))
+    q = (1.0 - fade) / (1.0 + dr) if dr > -0.999 else 0.0
+    if abs(1.0 - q) < 1e-12:
+        deg_factor = float(years) / (1.0 + dr) if dr > -0.999 else float(years)
+    else:
+        deg_factor = (1.0 / (1.0 + dr)) * (1.0 - q ** years) / (1.0 - q)
+    npvs = -capexes + savings_gross * deg_factor - annual_om * annuity_om
 
     def pct(values: np.ndarray, q: float) -> float:
         return float(np.percentile(values, q))
@@ -837,23 +1062,35 @@ def mrk_peak_reduction_and_rv_opportunity(
     peaks_opt = [float(v["monthly_peak_kw"]) for v in optimized_detail.values()]
     max_peak_opt = max(peaks_opt) if peaks_opt else 0.0
     sm = max(0.0, safety_margin_pct) / 100.0
-    raw_rec = max_peak_opt * (1.0 + sm)
-    recommended_kw = float(math.ceil(raw_rec / 5.0) * 5.0)
+    if not peaks_opt:
+        # No monthly peaks → no evidence to change the contract.
+        recommended_kw = float(contract_kw)
+    else:
+        raw_rec = max_peak_opt * (1.0 + sm)
+        recommended_kw = float(math.ceil(raw_rec / 5.0) * 5.0)
+        if recommended_kw <= 0 and contract_kw > 0:
+            recommended_kw = 5.0
+        # Never present a *higher* contract as a "proposal to cut".
+        if recommended_kw >= contract_kw > 0:
+            recommended_kw = float(contract_kw)
+    cut_kw = max(0.0, contract_kw - recommended_kw)
     months = len(optimized_detail)
-    fixed_savings_period = 0.0
-    if recommended_kw < contract_kw and months > 0:
-        fixed_savings_period = (contract_kw - recommended_kw) * fee_eur_per_kw_month * float(months)
+    fixed_savings_period = cut_kw * fee_eur_per_kw_month * float(months) if months > 0 else 0.0
+    fixed_savings_year = cut_kw * fee_eur_per_kw_month * 12.0
 
     return {
         "mean_monthly_peak_reduction_kw": round(float(np.mean(reductions)), 3) if reductions else 0.0,
         "max_monthly_peak_import_kw_after_optimization": round(max_peak_opt, 3),
         "recommended_rv_kw_conservative": recommended_kw,
         "current_contract_rv_kw": contract_kw,
-        "rv_downsizing_potential_kw": round(max(0.0, contract_kw - recommended_kw), 3),
+        "rv_downsizing_potential_kw": round(cut_kw, 3),
+        "fee_eur_per_kw_month": round(float(fee_eur_per_kw_month), 4),
+        "safety_margin_pct": round(float(safety_margin_pct), 2),
         "estimated_fixed_rv_fee_savings_if_resized_eur_for_period": round(fixed_savings_period, 2),
+        "estimated_fixed_rv_fee_savings_eur_per_year": round(fixed_savings_year, 2),
         "disclaimer": (
-            "Návrh RV je orientačný z historických maxím po simulácii; zmena zmluvy s DS, rezerva pri výkyvoch "
-            "záťaže a riziko prekročenia pri vyššom odbere musia posúdiť prevádzka a právnik."
+            "Návrh MRK je orientačný z historických maxím po simulácii; zmena zmluvy s PDS, rezerva pri výkyvoch "
+            "záťaže a riziko prekročenia pri vyššom odbere musia posúdiť prevádzka a zmluva."
         ),
     }
 
@@ -951,6 +1188,26 @@ def _apply_system_scope(cfg: dict[str, Any]) -> None:
         cfg["use_pv"], cfg["use_battery"] = True, True
 
 
+def _sync_scope_flags_to_sizes(cfg: dict[str, Any]) -> None:
+    """Align use_pv / use_battery with the resolved kWp and kWh.
+
+    Auto search under ``pv_and_battery`` may pick 0 kWh. Leaving
+    ``use_battery=True`` then scores the empty-battery dispatch path, which
+    drops feed-in revenue and understates PV-only savings.
+    """
+    scope = str(((cfg.get("equipment") or {}).get("system_scope") or "")).strip().lower()
+    kwp = float(((cfg.get("pv") or {}).get("installed_kwp") or 0.0))
+    kwh = float(((cfg.get("battery") or {}).get("energy_kwh") or 0.0))
+    if scope in ("pv_only", "pv"):
+        cfg["use_pv"], cfg["use_battery"] = True, False
+        return
+    if scope in ("battery_only", "battery"):
+        cfg["use_pv"], cfg["use_battery"] = False, True
+        return
+    cfg["use_pv"] = kwp > 1e-6
+    cfg["use_battery"] = kwh > 1e-6
+
+
 def _estimate_annual_load_mwh(load_kw: np.ndarray, dt_h: float) -> float:
     n = len(load_kw)
     days = n * dt_h / 24.0
@@ -958,7 +1215,12 @@ def _estimate_annual_load_mwh(load_kw: np.ndarray, dt_h: float) -> float:
 
 
 def technical_bounds_kwp_kwh(cfg: dict[str, Any], df: pd.DataFrame, dt_h: float) -> dict[str, Any]:
-    """Max. kWp / kWh z plochy, CAPEX alebo odhad zo spotreby (ako TechnicalLimitsPiece v pitonak)."""
+    """Max. kWp / kWh z plochy, strešného zaťaženia alebo odhadu zo spotreby (ako TechnicalLimitsPiece).
+
+    Stropy CAPEX sa sem nepremietajú do osí mapy — obmedzujú len výber
+    odporúčanej veľkosti. V režime celkového CAPEX ide o jeden spoločný
+    rozpočet (FVE + batéria); v režime rozdelenia sú stropy nezávislé.
+    """
     eq = cfg.get("equipment") or {}
     c = eq.get("constraints") or {}
     lay = eq.get("layout") or {}
@@ -966,7 +1228,6 @@ def technical_bounds_kwp_kwh(cfg: dict[str, Any], df: pd.DataFrame, dt_h: float)
     bat_ref = cfg.get("battery") or {}
     load = df["load_kw"].astype(float).values
     annual_mwh = _estimate_annual_load_mwh(load, dt_h)
-    yield_kwp = float(pv_ref.get("yield_kwh_per_kwp_year", 1000.0))
 
     roof = float(c.get("max_roof_area_m2") or 0)
     ground = float(c.get("max_ground_area_m2") or 0)
@@ -989,9 +1250,9 @@ def technical_bounds_kwp_kwh(cfg: dict[str, Any], df: pd.DataFrame, dt_h: float)
     notes: list[str] = []
 
     if max_kwp <= 1e-6:
-        base_kwp = (annual_mwh * 1000.0 / max(yield_kwp, 1.0)) if annual_mwh > 1e-6 else 300.0
+        base_kwp = annual_mwh if annual_mwh > 1e-6 else 300.0
         max_kwp = max(100.0, base_kwp * 1.8)
-        notes.append("Bez limitu strechy: max. kWp odhad zo spotreby a výťažnosti.")
+        notes.append("Bez limitu strechy: max. kWp odhad zo spotreby.")
     else:
         notes.append("Limit plochy FVE aplikovaný.")
 
@@ -1004,21 +1265,31 @@ def technical_bounds_kwp_kwh(cfg: dict[str, Any], df: pd.DataFrame, dt_h: float)
         max_kwh = min(max_kwh, float(c["max_battery_kwh"]))
         notes.append("Pevný strop max_battery_kwh.")
 
-    max_capex = float(c.get("max_capex_eur") or 0.0)
-    eur_kwp = float(pv_ref.get("specific_capex_eur_per_kwp", 800.0))
-    eur_kwh = float(bat_ref.get("specific_capex_eur_per_kwh", 400.0))
-    if max_capex > 1e-6:
-        max_kwp = min(max_kwp, max_capex / max(eur_kwp, 1e-9))
-        max_kwh = min(max_kwh, max_capex / max(eur_kwh, 1e-9))
-        notes.append("Strop CAPEX zúžil horné limity kWp/kWh.")
-
     if c.get("roof_load_limit_kg_per_m2") is not None and roof > 1e-6 and mount != "ground":
         max_kwp = min(max_kwp, roof * kwp_per_m2 * 0.92)
         notes.append("Zníženie max. kWp kvôli strešnému zaťaženiu (faktor 0.92).")
 
+    eur_kwp = float(pv_ref.get("specific_capex_eur_per_kwp", 800.0))
+    eur_kwh = float(bat_ref.get("specific_capex_eur_per_kwh", 400.0))
+    cap = apply_capex_axis_budgets(
+        c,
+        max_kwp=max_kwp,
+        max_kwh=max_kwh,
+        eur_per_kwp=eur_kwp,
+        eur_per_kwh=eur_kwh,
+    )
+    notes.extend(capex_limit_notes(cap, slovak=True))
+
     return {
         "max_kwp": max(0.0, max_kwp),
         "max_kwh": max(0.0, max_kwh),
+        "max_kwp_budget": cap["max_kwp_budget"],
+        "max_kwh_budget": cap["max_kwh_budget"],
+        "capex_mode": cap.get("capex_mode"),
+        "max_total_capex_eur": cap.get("max_total_capex_eur"),
+        "max_capex_eur": cap.get("max_capex_eur") or 0.0,
+        "max_pv_capex_eur": cap.get("max_pv_capex_eur"),
+        "max_battery_capex_eur": cap.get("max_battery_capex_eur"),
         "annual_load_mwh_est": round(annual_mwh, 3),
         "notes": notes,
     }
@@ -1048,9 +1319,52 @@ def _discounted_payback_years(capex: float, annual: float, dr: float, max_years:
     return None
 
 
+def _npv_degrading_cashflows(
+    annual_gross: float,
+    annual_om: float,
+    years: int,
+    dr: float,
+    deg: float,
+) -> float:
+    """NPV of year-1 bill savings that fade with PV degradation, minus flat O&M."""
+    total = 0.0
+    fade = float(min(0.05, max(0.0, deg)))
+    n = max(1, int(years))
+    for t in range(1, n + 1):
+        cf = float(annual_gross) * ((1.0 - fade) ** (t - 1)) - float(annual_om)
+        total += cf / ((1.0 + dr) ** t) if dr > 0 else cf
+    return float(total)
+
+
+def _discounted_payback_degrading(
+    capex: float,
+    annual_gross: float,
+    annual_om: float,
+    dr: float,
+    deg: float,
+    max_years: int = 40,
+) -> float | None:
+    if capex <= 0:
+        return None
+    fade = float(min(0.05, max(0.0, deg)))
+    cum = 0.0
+    for t in range(1, max_years + 1):
+        cf = float(annual_gross) * ((1.0 - fade) ** (t - 1)) - float(annual_om)
+        inc = cf / ((1.0 + dr) ** t) if dr > 0 else cf
+        prev = cum
+        cum += inc
+        if cum >= capex:
+            if inc <= 1e-12:
+                return float(t)
+            return float(t - 1 + (capex - prev) / inc)
+    return None
+
+
 def primary_optimized_scenario(bundle: dict[str, Any]) -> dict[str, Any] | None:
     """Aktívny optimalizačný scenár podľa use_pv / use_battery."""
     up, ub = bool(bundle.get("use_pv")), bool(bundle.get("use_bat"))
+    if ub and float(bundle.get("energy_kwh") or 0.0) <= 1e-6:
+        ub = False
     if up and ub:
         return bundle.get("pv_and_battery")
     if up and not ub:
@@ -1074,25 +1388,34 @@ def _score_financials(
     ann = 365.0 / max(bundle["days_in_sample"], 1e-6)
     sav_period = float(baseline["total_operating_eur"]) - float(both["total_operating_eur"])
     annual_sav = sav_period * ann
+    annual_om = float(bundle.get("annual_om_eur") or 0.0)
+    deg = float(bundle.get("degradation_frac") or 0.0)
+    annual_net = annual_sav - annual_om
     capex = float(bundle["pv_capex"]) + float(bundle["battery_capex"])
     meta = {
         "annual_operating_savings_eur": round(annual_sav, 2),
+        "annual_om_eur": round(annual_om, 2),
+        "annual_net_cashflow_eur": round(annual_net, 2),
         "simple_payback_years": None,
         "npv_eur": None,
         "total_capex_eur": round(capex, 2),
     }
-    if annual_sav <= 1e-6 or capex <= 0:
-        return float("inf"), {**meta, "reason": "nekladná úspora alebo nulový CAPEX"}
+    if annual_net <= 1e-6 or capex <= 0:
+        return float("inf"), {**meta, "reason": "nekladná úspora po O&M alebo nulový CAPEX"}
 
-    pb = capex / annual_sav
-    npv_v = -capex + _npv_annuity(annual_sav, years, dr)
-    dpb = _discounted_payback_years(capex, annual_sav, dr, max_years=max(years + 5, 40))
+    pb = capex / annual_net
+    npv_v = -capex + _npv_degrading_cashflows(annual_sav, annual_om, years, dr, deg)
+    dpb = _discounted_payback_degrading(
+        capex, annual_sav, annual_om, dr, deg, max_years=max(years + 5, 40)
+    )
     meta["simple_payback_years"] = round(pb, 3)
     meta["npv_eur"] = round(npv_v, 2)
     meta["discounted_payback_years"] = round(dpb, 3) if dpb is not None else None
 
     if objective in ("max_npv", "max_npv_operating", "npv"):
         return float(-npv_v), meta
+    if objective in ("max_annual_savings", "max_savings", "annual_savings", "highest_savings"):
+        return float(-annual_net), meta
     return float(pb), meta
 
 
@@ -1315,11 +1638,11 @@ def _sim_bundle(
     an_cfg = cfg.get("analysis") or {}
     en_cfg = cfg.get("energy") or {}
 
+    _sync_scope_flags_to_sizes(cfg)
     use_pv = bool(cfg.get("use_pv", True))
     use_bat = bool(cfg.get("use_battery", True))
 
     installed_kwp = float(pv_cfg.get("installed_kwp", 0.0))
-    yield_kwp = float(pv_cfg.get("yield_kwh_per_kwp_year", 1000.0))
     e_kwh = float(bat_cfg.get("energy_kwh", 0.0))
     c_rate = float(bat_cfg.get("max_c_rate", 0.5))
     eta_c = float(bat_cfg.get("charge_efficiency", 0.95))
@@ -1336,8 +1659,18 @@ def _sim_bundle(
     dr = float(an_cfg.get("discount_rate", 0.08))
 
     feed_in = float(en_cfg.get("feed_in_surplus_eur_per_kwh", 0.05))
+    distribution = distribution_tariff_eur_per_kwh(cfg)
     max_frac_grid = float(bat_cfg.get("max_fraction_capacity_from_grid_charge", 0.72))
     peak_reserve_pct = float(bat_cfg.get("peak_shaving_reserve_pct", 30.0))
+    wear = battery_dispatch_wear_eur_per_kwh(bat_cfg)
+    annual_om = plant_om_eur_per_year(cfg, installed_kwp if use_pv else 0.0, e_kwh if use_bat else 0.0)
+    deg = plant_degradation_frac(cfg)
+    if pv_profile_per_kwp is not None:
+        yield_kwp = annual_kwh_per_kwp_from_profile(pv_profile_per_kwp, dt_h)
+    else:
+        yield_kwp = annual_kwh_per_kwp_from_profile(
+            synthetic_pv_kw(df["datetime"], 1.0).to_numpy(), dt_h
+        )
 
     econ_global = compute_levelized_economics(
         pv_cfg,
@@ -1370,10 +1703,7 @@ def _sim_bundle(
             if pv_profile_per_kwp is not None:
                 pv_kw = np.asarray(pv_profile_per_kwp, dtype=float) * installed_kwp
             else:
-                pv_ser = synthetic_pv_kw(
-                    df["datetime"], installed_kwp, yield_kwh_per_kwp_year=yield_kwp
-                )
-                pv_kw = pv_ser.values
+                pv_kw = synthetic_pv_kw(df["datetime"], installed_kwp).to_numpy()
         else:
             pv_kw = np.zeros(n)
 
@@ -1396,6 +1726,7 @@ def _sim_bundle(
             )
             soc = np.full(n, np.nan)
             cycles = float(np.sum((np.clip(grid, 0.0, None) * dt_h * eta_c) / max(e_kwh, 1e-9)))
+            peak_reserve = {}
         elif bat_on and e_kwh > 1e-6:
             g, soc, _p_b, export_kw = dispatch_battery(
                 net.astype(float),
@@ -1409,22 +1740,27 @@ def _sim_bundle(
                 mrk_contract_kw=mrk_kw,
                 feed_in_eur_per_kwh=feed_in,
                 pv_lcoe_eur_per_kwh=float(econ_global["pv_lcoe_eur_per_kwh"]),
-                battery_throughput_eur_per_kwh=float(econ_global["battery_marginal_eur_per_kwh_throughput"]),
+                battery_throughput_eur_per_kwh=wear,
                 max_fraction_from_grid_charge=max_frac_grid,
                 excess_penalty_eur_per_kw=pen,
+                fee_eur_per_kw_month=fee_m,
                 peak_shaving_reserve_pct=peak_reserve_pct,
                 price_low=kw_dispatch.get("price_low"),
                 price_high=kw_dispatch.get("price_high"),
                 price_expensive=kw_dispatch.get("price_expensive"),
+                distribution_eur_per_kwh=distribution,
+                timestamps=ts,
             )
             grid = g
             cycles = equivalent_full_cycles(pd.Series(soc))
+            peak_reserve = dict(getattr(dispatch_battery, "last_peak_reserve", {}) or {})
         else:
             grid = baseline_grid
             soc = np.full(n, np.nan)
             cycles = 0.0
+            peak_reserve = {}
 
-        e_cost = energy_cost_eur(pd.Series(grid), price, dt_h)
+        e_cost = energy_cost_eur(pd.Series(grid), price, dt_h, distribution)
         rev = feed_in_revenue_eur(pd.Series(export_kw), feed_in, dt_h) if pv_on else 0.0
         if trading_only:
             mrk_cost, mrk_detail = 0.0, {}
@@ -1449,6 +1785,7 @@ def _sim_bundle(
             "total_with_capex_eur": round(total_op + ann_capex, 2),
             "equivalent_full_cycles": round(cycles, 2),
             "monthly_peak_detail": mrk_detail,
+            "mrk_peak_reserve": peak_reserve,
         }
 
     baseline = scenario_case("baseline_no_storage", False, False)
@@ -1477,6 +1814,8 @@ def _sim_bundle(
         "years": years,
         "discount_rate": dr,
         "profiles_kw": profiles_kw,
+        "annual_om_eur": annual_om,
+        "degradation_frac": deg,
     }
 
 
@@ -1485,6 +1824,7 @@ def _auto_optimize_sizes(
     df: pd.DataFrame,
     bounds_override: dict[str, Any] | None = None,
     pv_profile_per_kwp: np.ndarray | None = None,
+    battery_strategy_thresholds: dict[str, float] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Prehľadáva (kWp, kWh) a vracia najlepšiu konfiguráciu + log.
 
@@ -1510,13 +1850,7 @@ def _auto_optimize_sizes(
     dt_h = infer_timestep_hours(df)
     bounds = technical_bounds_kwp_kwh(base, df, dt_h)
     if bounds_override:
-        for key in ("max_kwp", "max_kwh"):
-            value = bounds_override.get(key)
-            if value is not None:
-                try:
-                    bounds[key] = float(value)
-                except (TypeError, ValueError):
-                    pass
+        copy_capex_bound_fields(bounds, bounds_override)
         bounds["bounds_source"] = "TechnicalLimitsPiece"
         upstream_notes = bounds_override.get("notes")
         if isinstance(upstream_notes, list):
@@ -1524,8 +1858,8 @@ def _auto_optimize_sizes(
     else:
         bounds["bounds_source"] = "recomputed_locally"
 
-    kwp_step = float(auto.get("kwp_step", 50.0))
-    kwh_step = float(auto.get("kwh_step", 100.0))
+    kwp_step = float(auto.get("kwp_step") or 100.0)
+    kwh_step = float(auto.get("kwh_step") or 200.0)
     kwp_min = float(auto.get("kwp_min", 0.0))
     kwh_min = float(auto.get("kwh_min", 0.0))
     min_pv = float(auto.get("min_pv_kwp", 100.0))
@@ -1533,8 +1867,25 @@ def _auto_optimize_sizes(
     require_battery = bool(auto.get("require_battery", use_bat and scope not in ("pv_only", "pv")))
     min_bat = float(auto.get("min_battery_kwh", max(100.0, kwh_step) if require_battery else 0.0))
 
-    max_kwp = bounds["max_kwp"]
-    max_kwh = bounds["max_kwh"]
+    max_kwp = float(bounds.get("max_kwp_budget") or bounds.get("max_kwp") or 0.0)
+    max_kwh = float(bounds.get("max_kwh_budget") or bounds.get("max_kwh") or 0.0)
+    cons = eq.get("constraints") or {}
+    max_pv_capex = bounds.get("max_pv_capex_eur")
+    if max_pv_capex is None:
+        max_pv_capex = cons.get("max_pv_capex_eur")
+    max_battery_capex = bounds.get("max_battery_capex_eur")
+    if max_battery_capex is None:
+        max_battery_capex = cons.get("max_battery_capex_eur")
+    max_total_capex = bounds.get("max_total_capex_eur")
+    if max_total_capex is None:
+        max_total_capex = cons.get("max_total_capex_eur")
+    max_capex = float(
+        bounds.get("max_capex_eur")
+        or cons.get("max_capex_eur")
+        or 0.0
+    )
+    eur_kwp = float((base.get("pv") or {}).get("specific_capex_eur_per_kwp", 800.0))
+    eur_kwh = float((base.get("battery") or {}).get("specific_capex_eur_per_kwh", 400.0))
 
     def frange(a: float, b: float, step: float) -> list[float]:
         if step <= 0:
@@ -1548,23 +1899,17 @@ def _auto_optimize_sizes(
             x += step
         return out
 
-    if scope in ("pv_only", "pv"):
-        kwp_vals = frange(max(kwp_min, min_pv), max_kwp, kwp_step)
-        kwh_vals = [0.0]
-    elif scope in ("battery_only", "battery"):
-        kwp_vals = [0.0]
-        kwh_vals = frange(max(kwh_min, min_bat), max_kwh, kwh_step)
-    else:
-        kwp_floor = max(kwp_min, min_pv if require_pv else 0.0)
-        kwh_floor = max(kwh_min, min_bat if require_battery else 0.0)
-        kwp_vals = frange(kwp_floor, max_kwp, kwp_step)
-        kwh_vals = frange(kwh_floor, max_kwh, kwh_step)
+    def _over_budget(kwp: float, kwh: float, total: float | None = None) -> bool:
+        return configuration_over_budget(
+            kwp=kwp,
+            kwh=kwh,
+            budget=bounds,
+            total_capex_eur=total,
+            eur_per_kwp=eur_kwp,
+            eur_per_kwh=eur_kwh,
+        )
 
-    pairs = [(k, w) for k in kwp_vals for w in kwh_vals]
-    if len(pairs) > max_cfgs:
-        factor = math.ceil(len(pairs) / max_cfgs)
-        kwp_step *= factor
-        kwh_step *= factor
+    def _axis_pairs() -> list[tuple[float, float]]:
         if scope in ("pv_only", "pv"):
             kwp_vals = frange(max(kwp_min, min_pv), max_kwp, kwp_step)
             kwh_vals = [0.0]
@@ -1576,13 +1921,29 @@ def _auto_optimize_sizes(
             kwh_floor = max(kwh_min, min_bat if require_battery else 0.0)
             kwp_vals = frange(kwp_floor, max_kwp, kwp_step)
             kwh_vals = frange(kwh_floor, max_kwh, kwh_step)
-        pairs = [(k, w) for k in kwp_vals for w in kwh_vals]
+        return [(k, w) for k in kwp_vals for w in kwh_vals if not _over_budget(k, w)]
+
+    pairs = _axis_pairs()
+    if len(pairs) > max_cfgs:
+        raw_n = max(len(pairs), 1)
+        factor = math.ceil(raw_n / max_cfgs)
+        kwp_step *= factor
+        kwh_step *= factor
+        pairs = _axis_pairs()
+    if not pairs:
+        pairs = [(0.0, 0.0)]
 
     def _eval_pair(kwp: float, kwh: float) -> tuple[float, dict[str, Any], dict[str, Any]]:
         trial = copy.deepcopy(base)
         trial.setdefault("pv", {})["installed_kwp"] = float(kwp)
         trial.setdefault("battery", {})["energy_kwh"] = float(kwh)
-        bundle = _sim_bundle(trial, df, pv_profile_per_kwp=pv_profile_per_kwp)
+        _sync_scope_flags_to_sizes(trial)
+        bundle = _sim_bundle(
+            trial,
+            df,
+            pv_profile_per_kwp=pv_profile_per_kwp,
+            battery_strategy_thresholds=battery_strategy_thresholds,
+        )
         score, fin = _score_financials(bundle, dr=dr, years=years, objective=objective)
         return score, fin, trial
 
@@ -1597,12 +1958,15 @@ def _auto_optimize_sizes(
             "kwh": kwh,
             "score": score,
             "annual_operating_savings_eur": fin.get("annual_operating_savings_eur"),
+            "annual_net_cashflow_eur": fin.get("annual_net_cashflow_eur"),
             "simple_payback_years": fin.get("simple_payback_years"),
             "npv_eur": fin.get("npv_eur"),
             "total_capex_eur": fin.get("total_capex_eur"),
         }
         grid_rows.append(row)
         if not math.isfinite(score):
+            continue
+        if _over_budget(kwp, kwh, fin.get("total_capex_eur")):
             continue
         cand_key = (score, float(fin.get("total_capex_eur") or 1e18), -float(fin.get("npv_eur") or 0))
         pool.append((cand_key, trial))
@@ -1618,6 +1982,9 @@ def _auto_optimize_sizes(
         best_key, best_cfg = min(pool, key=lambda x: x[0])
     if best_cfg is None:
         best_cfg = copy.deepcopy(base)
+        best_cfg.setdefault("pv", {})["installed_kwp"] = 0.0
+        best_cfg.setdefault("battery", {})["energy_kwh"] = 0.0
+    _sync_scope_flags_to_sizes(best_cfg)
 
     log = {
         "bounds": bounds,
@@ -1628,6 +1995,12 @@ def _auto_optimize_sizes(
         "require_pv": require_pv,
         "require_battery": require_battery,
         "candidates_evaluated": len(pairs),
+        "capex_mode": bounds.get("capex_mode"),
+        "max_capex_eur": max_capex,
+        "max_total_capex_eur": max_total_capex,
+        "max_pv_capex_eur": max_pv_capex,
+        "max_battery_capex_eur": max_battery_capex,
+        "battery_strategy_thresholds": battery_strategy_thresholds,
         "target_payback_years": target_pb,
         "grid": grid_rows[: min(40, len(grid_rows))],
         "message": "Automatický výber: najlepší nález podľa cieľa (po filtri cieľovej návratnosti ak je zadaná).",
@@ -1678,10 +2051,11 @@ def _scenario_from_precomputed(
     feed_in_eur_per_kwh: float,
     cycles: float = 0.0,
     trading_only: bool = False,
+    distribution_eur_per_kwh: float = 0.0,
 ) -> dict[str, Any]:
     grid = pd.Series(np.asarray(grid_kw, dtype=float))
     export = pd.Series(np.asarray(export_kw, dtype=float))
-    e_cost = energy_cost_eur(grid, price, dt_h)
+    e_cost = energy_cost_eur(grid, price, dt_h, distribution_eur_per_kwh)
     rev = feed_in_revenue_eur(export, feed_in_eur_per_kwh, dt_h)
     if trading_only:
         mrk_cost, mrk_detail = 0.0, {}
@@ -1744,21 +2118,36 @@ def run_analysis(
     an_cfg = cfg.get("analysis") or {}
     en_cfg = cfg.get("energy") or {}
 
+    _sync_scope_flags_to_sizes(cfg)
     use_pv = bool(cfg.get("use_pv", True))
     use_bat = bool(cfg.get("use_battery", True))
     installed_kwp = float(pv_cfg.get("installed_kwp", 0.0))
-    yield_kwp = float(pv_cfg.get("yield_kwh_per_kwp_year", 1000.0))
     e_kwh = float(bat_cfg.get("energy_kwh", 0.0))
     eta_c = float(bat_cfg.get("charge_efficiency", 0.95))
     years = int(an_cfg.get("amortization_years", 12))
     dr = float(an_cfg.get("discount_rate", 0.08))
     feed_in = float(en_cfg.get("feed_in_surplus_eur_per_kwh", 0.05))
+    distribution = distribution_tariff_eur_per_kwh(cfg)
     mrk_kw = float(mrk_cfg.get("contract_kw", 0.0))
     fee_m = float(mrk_cfg.get("fee_eur_per_kw_month", 0.0))
     pen = float(mrk_cfg.get("excess_peak_penalty_eur_per_kw", 0.0))
 
     pv_capex = installed_kwp * float(pv_cfg.get("specific_capex_eur_per_kwp", 800.0)) if use_pv else 0.0
     bat_capex = e_kwh * float(bat_cfg.get("specific_capex_eur_per_kwh", 400.0)) if use_bat else 0.0
+
+    solar_frame = _load_aligned_frame(virtual_solar_csv, df, ["pv_kw"])
+    pv_kw = pd.to_numeric(solar_frame["pv_kw"], errors="coerce").fillna(0.0).clip(lower=0.0).to_numpy()
+    # virtual_solar.csv is generated before sizing, at the form reference kWp.
+    # Scale the per-kWp shape to the resolved array so pv_only matches the heatmap.
+    pv_per = load_pv_profile_per_kwp(virtual_solar_csv, df)
+    if pv_per is not None and installed_kwp > 0:
+        pv_kw = np.asarray(pv_per, dtype=float) * installed_kwp
+    if pv_per is not None:
+        yield_kwp = annual_kwh_per_kwp_from_profile(pv_per, dt_h)
+    elif installed_kwp > 0:
+        yield_kwp = annual_kwh_per_kwp_from_profile(pv_kw / installed_kwp, dt_h)
+    else:
+        yield_kwp = 0.0
     econ_global = compute_levelized_economics(
         pv_cfg,
         bat_cfg,
@@ -1776,9 +2165,6 @@ def run_analysis(
         use_pv=use_pv,
         use_bat=use_bat,
     )
-
-    solar_frame = _load_aligned_frame(virtual_solar_csv, df, ["pv_kw"])
-    pv_kw = pd.to_numeric(solar_frame["pv_kw"], errors="coerce").fillna(0.0).clip(lower=0.0).to_numpy()
 
     dispatch_required = [
         "battery_only_grid_kw",
@@ -1817,6 +2203,7 @@ def run_analysis(
         fee_eur_per_kw_month=fee_m,
         excess_penalty_eur_per_kw=pen,
         feed_in_eur_per_kwh=feed_in,
+        distribution_eur_per_kwh=distribution,
         cycles=0.0,
     )
     pv_only = (
@@ -1832,6 +2219,7 @@ def run_analysis(
             fee_eur_per_kw_month=fee_m,
             excess_penalty_eur_per_kw=pen,
             feed_in_eur_per_kwh=feed_in,
+            distribution_eur_per_kwh=distribution,
             cycles=0.0,
         )
         if use_pv
@@ -1850,6 +2238,7 @@ def run_analysis(
             fee_eur_per_kw_month=fee_m,
             excess_penalty_eur_per_kw=pen,
             feed_in_eur_per_kwh=feed_in,
+            distribution_eur_per_kwh=distribution,
             cycles=equivalent_full_cycles(pd.Series(battery_only_soc)),
         )
         if use_bat
@@ -1868,6 +2257,7 @@ def run_analysis(
             fee_eur_per_kw_month=fee_m,
             excess_penalty_eur_per_kw=pen,
             feed_in_eur_per_kwh=feed_in,
+            distribution_eur_per_kwh=distribution,
             cycles=equivalent_full_cycles(pd.Series(pv_battery_soc)),
         )
         if (use_pv and use_bat)
@@ -1888,6 +2278,7 @@ def run_analysis(
             fee_eur_per_kw_month=fee_m,
             excess_penalty_eur_per_kw=pen,
             feed_in_eur_per_kwh=feed_in,
+            distribution_eur_per_kwh=distribution,
             cycles=trading_cycles,
             trading_only=True,
         )
@@ -1896,6 +2287,38 @@ def run_analysis(
     )
 
     days_in_sample = float(n) * dt_h / 24.0
+    pvals = price.astype(float).to_numpy()
+    p_low = summary_row.get("strategy_charge_below_eur_per_kwh")
+    p_high = summary_row.get("strategy_discharge_above_eur_per_kwh")
+    try:
+        p_low = float(p_low) if p_low is not None else float(np.quantile(pvals, 0.30))
+    except (TypeError, ValueError):
+        p_low = float(np.quantile(pvals, 0.30)) if len(pvals) else 0.0
+    try:
+        p_high = float(p_high) if p_high is not None else float(np.quantile(pvals, 0.75))
+    except (TypeError, ValueError):
+        p_high = float(np.quantile(pvals, 0.75)) if len(pvals) else 0.0
+    net_for_reserve = (load - pv_kw) if use_pv else load
+    mrk_peak_reserve = decide_mrk_peak_reserve(
+        net_for_reserve,
+        dt_h,
+        energy_kwh=e_kwh,
+        max_c_rate=float(bat_cfg.get("max_c_rate", 0.5)),
+        eta_c=eta_c,
+        eta_d=float(bat_cfg.get("discharge_efficiency", 0.95)),
+        mrk_contract_kw=mrk_kw,
+        peak_shaving_reserve_pct=float(bat_cfg.get("peak_shaving_reserve_pct", 30.0)),
+        excess_penalty_eur_per_kw=pen,
+        fee_eur_per_kw_month=fee_m,
+        wear=battery_dispatch_wear_eur_per_kwh(bat_cfg),
+        price_low=p_low,
+        price_high=p_high,
+        timestamps=df["datetime"],
+    )
+    if pv_and_battery is not None:
+        pv_and_battery["mrk_peak_reserve"] = mrk_peak_reserve
+    elif battery_only is not None:
+        battery_only["mrk_peak_reserve"] = mrk_peak_reserve
     profiles_kw = {
         "baseline_no_storage": baseline_grid,
         "pv_only": pv_only_grid,
@@ -1922,6 +2345,8 @@ def run_analysis(
         "profiles_kw": profiles_kw,
         "installed_kwp": installed_kwp,
         "energy_kwh": e_kwh,
+        "annual_om_eur": plant_om_eur_per_year(cfg, installed_kwp if use_pv else 0.0, e_kwh if use_bat else 0.0),
+        "degradation_frac": plant_degradation_frac(cfg),
     }
 
     optimized = primary_optimized_scenario(bundle)
@@ -2065,6 +2490,8 @@ def run_analysis(
                 float(econ_global["opportunity_pv_to_battery_eur_per_kwh_stored"]), 6
             ),
             "round_trip_efficiency": round(float(econ_global["round_trip_efficiency"]), 4),
+            "distribution_eur_per_kwh": round(distribution, 6),
+            "feed_in_surplus_eur_per_kwh": round(feed_in, 6),
             "dispatch_note": "Battery dispatch is consumed from upstream BatterySimPiece; SimulatePiece aggregates only.",
         },
         "scenarios": {
@@ -2085,6 +2512,8 @@ def run_analysis(
             "pv_capex_eur": round(pv_capex, 2),
             "battery_capex_eur": round(bat_capex, 2),
             "amortization_years": years,
+            "specific_capex_eur_per_kwp": round(float(pv_cfg.get("specific_capex_eur_per_kwp", 800.0)), 2),
+            "specific_capex_eur_per_kwh": round(float(bat_cfg.get("specific_capex_eur_per_kwh", 400.0)), 2),
         },
         "executive_summary": executive_summary,
         "uncertainty_assessment": uncertainty,
@@ -2094,6 +2523,9 @@ def run_analysis(
             "report_schema": "mrk_report_v2",
         },
         "mrk_and_rv": mrk_rv_block,
+        "mrk_peak_reserve": (optimized or {}).get("mrk_peak_reserve")
+        or (pv_and_battery or {}).get("mrk_peak_reserve")
+        or {},
         "input_quality": price_quality,
         "equipment": equipment_block,
         "battery_lifetime_assessment": battery_soh,

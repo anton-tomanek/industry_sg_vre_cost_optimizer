@@ -37,6 +37,19 @@ except ModuleNotFoundError:
     except ModuleNotFoundError:
         od = None
 
+try:
+    from common.capex_budget import (
+        configuration_over_budget,
+        copy_capex_bound_fields,
+        has_capex_limit,
+    )
+except ModuleNotFoundError:
+    from pieces.common.capex_budget import (
+        configuration_over_budget,
+        copy_capex_bound_fields,
+        has_capex_limit,
+    )
+
 
 class SizingHeatmapPiece(BasePiece):
     """Build the PV x battery economics grid behind the sizing recommendation."""
@@ -80,15 +93,36 @@ class SizingHeatmapPiece(BasePiece):
                 input_data.virtual_solar_csv, df, reference_kwp=reference_kwp
             )
             profile_source = "ai_forecast" if pv_profile is not None else "synthetic_fallback"
+            strategy_thresholds = sim.load_battery_strategy_thresholds(
+                getattr(input_data, "battery_strategy_recommendation_json", None)
+            )
             _log(f"PV profile source: {profile_source}")
+            _log(
+                "Battery strategy thresholds: "
+                + (str(strategy_thresholds) if strategy_thresholds else "fallback quantiles in dispatch")
+            )
 
             bounds = self._bounds(sim, cfg, df, dt_h, input_data.technical_limits_json)
             max_kwp = float(bounds.get("max_kwp") or 0.0)
             max_kwh = float(bounds.get("max_kwh") or 0.0)
+            cons = (cfg.get("equipment") or {}).get("constraints") or {}
+            max_capex = float(
+                bounds.get("max_capex_eur")
+                or cons.get("max_capex_eur")
+                or 0.0
+            )
+            max_total_capex = bounds.get("max_total_capex_eur")
+            if max_total_capex is None:
+                max_total_capex = cons.get("max_total_capex_eur")
+            max_pv_capex = bounds.get("max_pv_capex_eur")
+            if max_pv_capex is None:
+                max_pv_capex = cons.get("max_pv_capex_eur")
+            max_battery_capex = bounds.get("max_battery_capex_eur")
+            if max_battery_capex is None:
+                max_battery_capex = cons.get("max_battery_capex_eur")
+            eur_kwp = float((cfg.get("pv") or {}).get("specific_capex_eur_per_kwp", 800.0))
+            eur_kwh = float((cfg.get("battery") or {}).get("specific_capex_eur_per_kwh", 400.0))
             _log(f"Sweep bounds: max_kwp={max_kwp:.1f}, max_kwh={max_kwh:.1f}")
-
-            kwp_axis = self._axis(max_kwp, int(input_data.pv_steps))
-            kwh_axis = self._axis(max_kwh, int(input_data.battery_steps))
 
             analysis = cfg.get("analysis") or {}
             years = int(analysis.get("amortization_years", 12))
@@ -96,6 +130,40 @@ class SizingHeatmapPiece(BasePiece):
             objective = str(
                 ((cfg.get("equipment") or {}).get("auto") or {}).get("objective", "max_npv")
             ).lower()
+            axis_bias = (
+                "large"
+                if objective in (
+                    "max_annual_savings",
+                    "max_savings",
+                    "annual_savings",
+                    "highest_savings",
+                )
+                else "uniform"
+            )
+            auto = (cfg.get("equipment") or {}).get("auto") or {}
+            kwp_step = float(auto.get("kwp_step") or 100.0)
+            kwh_step = float(auto.get("kwh_step") or 200.0)
+            sized_kwp = float((cfg.get("pv") or {}).get("installed_kwp") or 0.0)
+            sized_kwh = float((cfg.get("battery") or {}).get("energy_kwh") or 0.0)
+            kwp_axis = self._axis(max_kwp, int(input_data.pv_steps), bias=axis_bias)
+            kwh_axis = self._battery_axis(
+                max_kwh, int(input_data.battery_steps), bias=axis_bias, step=kwh_step
+            )
+            kwp_axis = self._inject_search_steps(kwp_axis, max_kwp, kwp_step, count=3)
+            budget_kwp = float(bounds.get("max_kwp_budget") or 0.0)
+            budget_kwh = float(bounds.get("max_kwh_budget") or 0.0)
+            extras_kwp = [v for v in (budget_kwp, sized_kwp) if v > 1e-6 and v <= max_kwp + 1e-6]
+            extras_kwh = [v for v in (budget_kwh, sized_kwh) if v > 1e-6 and v <= max_kwh + 1e-6]
+            if extras_kwp:
+                kwp_axis = sorted({*kwp_axis, *[float(round(v)) for v in extras_kwp]})
+            if extras_kwh:
+                kwh_axis = sorted({*kwh_axis, *[float(round(v)) for v in extras_kwh]})
+            _log(
+                "Axes: pv_kwp="
+                + ",".join(str(int(round(v))) for v in kwp_axis)
+                + " battery_kwh="
+                + ",".join(str(int(round(v))) for v in kwh_axis)
+            )
 
             rows: list[dict] = []
             grids = {
@@ -112,21 +180,68 @@ class SizingHeatmapPiece(BasePiece):
                     "battery_cycles_per_year",
                     "battery_life_years",
                     "cashflow_after_om_eur",
+                    "proposed_mrk_kw",
+                    "mrk_cut_kw",
+                    "mrk_savings_annual_eur",
+                    "peak_after_kw",
                 )
             }
 
-            best = None
+            best_budget = None
+            best_any = None
             for j, kwh in enumerate(kwh_axis):
                 for i, kwp in enumerate(kwp_axis):
                     cell = self._evaluate(
-                        sim, cfg, df, kwp, kwh, pv_profile, years, discount_rate, objective, dt_h
+                        sim,
+                        cfg,
+                        df,
+                        kwp,
+                        kwh,
+                        pv_profile,
+                        years,
+                        discount_rate,
+                        objective,
+                        dt_h,
+                        strategy_thresholds,
                     )
                     rows.append(cell)
                     for key in grids:
                         grids[key][j][i] = cell.get(key)
-                    if cell["feasible"] and (best is None or cell["score"] < best["score"]):
-                        best = cell
+                    if not cell["feasible"]:
+                        continue
+                    if best_any is None or cell["score"] < best_any["score"]:
+                        best_any = cell
+                    if configuration_over_budget(
+                        kwp=kwp,
+                        kwh=kwh,
+                        budget=bounds,
+                        total_capex_eur=cell.get("total_capex_eur"),
+                        eur_per_kwp=eur_kwp,
+                        eur_per_kwh=eur_kwh,
+                    ):
+                        continue
+                    if best_budget is None or cell["score"] < best_budget["score"]:
+                        best_budget = cell
 
+            sized_cell = next(
+                (
+                    row
+                    for row in rows
+                    if abs(float(row.get("kwp") or 0) - sized_kwp) <= 1.0
+                    and abs(float(row.get("kwh") or 0) - sized_kwh) <= 1.0
+                    and row.get("feasible")
+                ),
+                None,
+            )
+            best = sized_cell or best_budget
+            if best is None and not has_capex_limit(bounds):
+                best = best_any
+            if best is None:
+                zero = next(
+                    (row for row in rows if row.get("kwp", 1) <= 1e-9 and row.get("kwh", 1) <= 1e-9),
+                    None,
+                )
+                best = zero or best_any
             if best is None:
                 if objective in ("shortest_payback", "min_payback", "payback"):
                     best = min(
@@ -135,8 +250,15 @@ class SizingHeatmapPiece(BasePiece):
                         if r.get("simple_payback_years") is not None
                         else 1e18,
                     )
-                else:
+                elif objective in (
+                    "max_annual_savings",
+                    "max_savings",
+                    "annual_savings",
+                    "highest_savings",
+                ):
                     best = max(rows, key=lambda r: r.get("annual_savings_eur") or -1e18)
+                else:
+                    best = max(rows, key=lambda r: r.get("npv_eur") or -1e18)
 
             _log(
                 f"Evaluated {len(rows)} combinations; best {best['kwp']:.0f} kWp / "
@@ -147,13 +269,26 @@ class SizingHeatmapPiece(BasePiece):
                 "format": "uc32_sizing_heatmap_v1",
                 "objective": objective,
                 "pv_profile_source": profile_source,
+                "battery_strategy_thresholds": strategy_thresholds,
                 "amortization_years": years,
                 "discount_rate": discount_rate,
+                "mrk": {
+                    "current_kw": float((cfg.get("mrk") or {}).get("contract_kw") or 0.0),
+                    "fee_eur_per_kw_month": float((cfg.get("mrk") or {}).get("fee_eur_per_kw_month") or 0.0),
+                    "safety_margin_pct": float(
+                        (cfg.get("mrk") or {}).get("rv_downsizing_safety_margin_pct", 8.0) or 8.0
+                    ),
+                },
                 "axes": {
                     "pv_kwp": kwp_axis,
                     "battery_kwh": kwh_axis,
                 },
                 "bounds": bounds,
+                "capex_mode": bounds.get("capex_mode"),
+                "max_capex_eur": max_capex,
+                "max_total_capex_eur": max_total_capex,
+                "max_pv_capex_eur": max_pv_capex,
+                "max_battery_capex_eur": max_battery_capex,
                 "grids": grids,
                 "recommended": {
                     "pv_kwp": best["kwp"],
@@ -168,6 +303,11 @@ class SizingHeatmapPiece(BasePiece):
                     "battery_cycles_per_year": best.get("battery_cycles_per_year"),
                     "battery_life_years": best.get("battery_life_years"),
                     "cashflow_after_om_eur": best.get("cashflow_after_om_eur"),
+                    "proposed_mrk_kw": best.get("proposed_mrk_kw"),
+                    "mrk_cut_kw": best.get("mrk_cut_kw"),
+                    "mrk_savings_annual_eur": best.get("mrk_savings_annual_eur"),
+                    "peak_after_kw": best.get("peak_after_kw"),
+                    "current_mrk_kw": best.get("current_mrk_kw"),
                 },
                 "current_scenario": {
                     "pv_kwp": reference_kwp,
@@ -218,27 +358,98 @@ class SizingHeatmapPiece(BasePiece):
         bounds = dict(sim.technical_bounds_kwp_kwh(cfg, df, dt_h))
         if limits_path and Path(str(limits_path)).is_file():
             upstream = json.loads(Path(str(limits_path)).read_text(encoding="utf-8")) or {}
-            for key in ("max_kwp", "max_kwh"):
-                if upstream.get(key) is not None:
-                    bounds[key] = float(upstream[key])
+            copy_capex_bound_fields(bounds, upstream)
             bounds["source"] = "TechnicalLimitsPiece"
+            notes = upstream.get("notes")
+            if isinstance(notes, list):
+                bounds["notes"] = list(notes)
         else:
             bounds["source"] = "derived_from_load"
         return bounds
 
     @staticmethod
-    def _axis(maximum: float, steps: int) -> list[float]:
-        """Axis from zero to the technical limit, rounded to readable sizes.
+    def _round_axis(values: list[float], maximum: float) -> list[float]:
+        if maximum <= 0:
+            return [0.0]
+        span = max(maximum / max(len(values), 2), 1.0)
+        magnitude = 10 ** max(0, int(np.floor(np.log10(span))))
+        rounded = sorted({max(0.0, float(round(v / magnitude) * magnitude)) for v in values})
+        exact = float(round(maximum))
+        if exact > 0 and all(abs(v - exact) > magnitude * 0.2 for v in rounded):
+            rounded.append(exact)
+            rounded = sorted(set(rounded))
+        if not rounded or rounded[0] != 0.0:
+            rounded = [0.0] + [v for v in rounded if v > 1e-9]
+        clipped = [v for v in rounded if v <= maximum + 1e-6]
+        if exact > 0 and exact <= maximum + 1e-6 and (
+            not clipped or abs(clipped[-1] - exact) > magnitude * 0.2
+        ):
+            clipped.append(exact)
+            clipped = sorted(set(clipped))
+        return [v for v in clipped if v >= 0]
 
-        Zero is included on both axes so the grid also answers "PV only" and
-        "battery only", which are the comparisons a reader reaches for first.
+    @staticmethod
+    def _inject_search_steps(
+        axis: list[float],
+        maximum: float,
+        step: float,
+        extras: list[float] | None = None,
+        count: int = 3,
+    ) -> list[float]:
+        """Keep the search step visible at the small end (200, 400, … kWh)."""
+        extra = [0.0]
+        if step and step > 1e-6:
+            extra.extend(float(step) * i for i in range(1, max(1, int(count)) + 1))
+        extra.extend(extras or [])
+        keep = [float(v) for v in extra if 0.0 <= float(v) <= float(maximum) + 1e-6]
+        return sorted({float(v) for v in list(axis) + keep})
+
+    @staticmethod
+    def _battery_axis(
+        maximum: float,
+        steps: int,
+        bias: str = "uniform",
+        step: float | None = None,
+    ) -> list[float]:
+        """Battery axis from 0 to the technical limit, including small packs.
+
+        Highest annual savings still densifies the large end, but the form step
+        (and typical 200/400 kWh cabinets) stay on the map so a 0 kWh pick is
+        not the only small option.
         """
         if maximum <= 0:
             return [0.0]
-        raw = np.linspace(0.0, maximum, steps)
-        magnitude = 10 ** max(0, int(np.floor(np.log10(max(maximum / steps, 1.0)))))
-        rounded = sorted({float(round(v / magnitude) * magnitude) for v in raw})
-        return [v for v in rounded if v >= 0]
+        base = SizingHeatmapPiece._axis(maximum, max(4, int(steps)), bias=bias)
+        return SizingHeatmapPiece._inject_search_steps(
+            base,
+            maximum,
+            float(step or 200.0),
+            extras=[200.0, 400.0],
+            count=3,
+        )
+
+    @staticmethod
+    def _axis(maximum: float, steps: int, bias: str = "uniform") -> list[float]:
+        """Axis from zero to the technical limit, rounded to readable sizes.
+
+        Zero is included on both axes so the grid also answers "PV only" and
+        "battery only". ``bias='large'`` puts more ticks near the maximum.
+        """
+        if maximum <= 0:
+            return [0.0]
+        steps = max(2, int(steps))
+        if bias == "large":
+            ts = np.linspace(0.0, 1.0, steps)
+            raw = [float(maximum * (t ** 1.65)) for t in ts]
+        else:
+            raw = [float(v) for v in np.linspace(0.0, maximum, steps)]
+        axis = SizingHeatmapPiece._round_axis(raw, maximum)
+        if bias == "large" and maximum > 0:
+            floor = maximum * 0.08
+            axis = [v for v in axis if v <= 1e-9 or v >= floor]
+            if 0.0 not in axis:
+                axis = [0.0] + axis
+        return axis
 
     @staticmethod
     def _evaluate(
@@ -252,6 +463,7 @@ class SizingHeatmapPiece(BasePiece):
         discount_rate: float,
         objective: str,
         dt_h: float,
+        strategy_thresholds=None,
     ) -> dict:
         import copy
 
@@ -277,13 +489,37 @@ class SizingHeatmapPiece(BasePiece):
             "battery_cycles_per_year": None,
             "battery_life_years": None,
             "cashflow_after_om_eur": None,
+            "proposed_mrk_kw": None,
+            "mrk_cut_kw": None,
+            "mrk_savings_annual_eur": None,
+            "peak_after_kw": None,
+            "current_mrk_kw": None,
         }
+        mrk_cfg = trial.get("mrk") or {}
+        contract_kw = float(mrk_cfg.get("contract_kw") or 0.0)
+        cell["current_mrk_kw"] = contract_kw
         if kwp <= 0 and kwh <= 0:
-            cell.update({"annual_savings_eur": 0.0, "npv_eur": 0.0, "total_capex_eur": 0.0})
+            peak_now = float(df["load_kw"].max()) if "load_kw" in df.columns and len(df) else None
+            cell.update(
+                {
+                    "annual_savings_eur": 0.0,
+                    "npv_eur": 0.0,
+                    "total_capex_eur": 0.0,
+                    "proposed_mrk_kw": contract_kw,
+                    "mrk_cut_kw": 0.0,
+                    "mrk_savings_annual_eur": 0.0,
+                    "peak_after_kw": peak_now,
+                }
+            )
             return cell
 
         try:
-            bundle = sim._sim_bundle(trial, df, pv_profile_per_kwp=pv_profile)
+            bundle = sim._sim_bundle(
+                trial,
+                df,
+                pv_profile_per_kwp=pv_profile,
+                battery_strategy_thresholds=strategy_thresholds,
+            )
             score, fin = sim._score_financials(
                 bundle, dr=discount_rate, years=years, objective=objective
             )
@@ -296,7 +532,10 @@ class SizingHeatmapPiece(BasePiece):
         baseline = bundle.get("baseline") or {}
         om = float((trial.get("pv") or {}).get("om_eur_per_kwp_year", 0.0) or 0.0) * float(kwp)
         om += float((trial.get("battery") or {}).get("om_eur_per_kwh_year", 0.0) or 0.0) * float(kwh)
-        annual_sav = fin.get("annual_operating_savings_eur")
+        annual_sav = fin.get("annual_net_cashflow_eur")
+        if annual_sav is None:
+            gross = fin.get("annual_operating_savings_eur")
+            annual_sav = (float(gross) - om) if gross is not None else None
         cycles_year = None
         life_years = None
         if kwh > 1e-6 and optimized is not None:
@@ -323,10 +562,26 @@ class SizingHeatmapPiece(BasePiece):
                 "battery_cycles_per_year": cycles_year,
                 "battery_life_years": life_years,
                 "cashflow_after_om_eur": (
-                    round(float(annual_sav) - om, 2) if annual_sav is not None else None
+                    round(float(annual_sav), 2) if annual_sav is not None else None
                 ),
             }
         )
+        fee = float(mrk_cfg.get("fee_eur_per_kw_month") or 0.0)
+        safety = float(mrk_cfg.get("rv_downsizing_safety_margin_pct", 8.0) or 8.0)
+        try:
+            rv = sim.mrk_peak_reduction_and_rv_opportunity(
+                baseline.get("monthly_peak_detail") or {},
+                (optimized or {}).get("monthly_peak_detail") or {},
+                contract_kw=contract_kw,
+                fee_eur_per_kw_month=fee,
+                safety_margin_pct=safety,
+            )
+            cell["proposed_mrk_kw"] = rv.get("recommended_rv_kw_conservative")
+            cell["mrk_cut_kw"] = rv.get("rv_downsizing_potential_kw")
+            cell["mrk_savings_annual_eur"] = rv.get("estimated_fixed_rv_fee_savings_eur_per_year")
+            cell["peak_after_kw"] = rv.get("max_monthly_peak_import_kw_after_optimization")
+        except Exception:
+            pass
 
         if pv_profile is not None and kwp > 0:
             produced = np.asarray(pv_profile, dtype=float) * kwp

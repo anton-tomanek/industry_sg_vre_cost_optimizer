@@ -203,6 +203,17 @@ WORKFLOW: dict[str, dict[str, Any]] = {
             "irradiance_scale_factor": _upstream("ShmuCalibrationPiece", "irradiance_scale_factor"),
         },
     },
+    # Thresholds depend on the price series, not on the later kWp/kWh choice,
+    # so this runs on the unsized scenario and feeds Sizing + BatterySim.
+    "BatteryStrategyOptimizerPiece": {
+        "row": 2,
+        "col": 1,
+        "inputs": {
+            "load_csv": _upstream("UserInputPiece", "load_csv"),
+            "scenario_yaml": _upstream("UserInputPiece", "scenario_yaml"),
+            "run_id": _upstream("UserInputPiece", "run_id"),
+        },
+    },
     # --- sizing, dispatch, economics and reporting ---------------------------
     "SizingOptimizationPiece": {
         "row": 1,
@@ -212,6 +223,9 @@ WORKFLOW: dict[str, dict[str, Any]] = {
             "scenario_yaml": _upstream("UserInputPiece", "scenario_yaml"),
             "virtual_solar_csv": _upstream("PvoutToVirtualSolarPiece", "virtual_solar_csv"),
             "technical_limits_json": _upstream("TechnicalLimitsPiece", "technical_limits_json"),
+            "battery_strategy_recommendation_json": _upstream(
+                "BatteryStrategyOptimizerPiece", "battery_strategy_recommendation_json"
+            ),
             "run_id": _upstream("UserInputPiece", "run_id"),
         },
     },
@@ -220,15 +234,6 @@ WORKFLOW: dict[str, dict[str, Any]] = {
         "col": 11,
         "inputs": {
             "pv_catalog_json": _upstream("CatalogSyncPiece", "pv_catalog_json"),
-            "scenario_yaml": _upstream("SizingOptimizationPiece", "sized_scenario_yaml"),
-            "run_id": _upstream("UserInputPiece", "run_id"),
-        },
-    },
-    "BatteryStrategyOptimizerPiece": {
-        "row": 1,
-        "col": 11,
-        "inputs": {
-            "load_csv": _upstream("UserInputPiece", "load_csv"),
             "scenario_yaml": _upstream("SizingOptimizationPiece", "sized_scenario_yaml"),
             "run_id": _upstream("UserInputPiece", "run_id"),
         },
@@ -272,6 +277,9 @@ WORKFLOW: dict[str, dict[str, Any]] = {
             "scenario_yaml": _upstream("SizingOptimizationPiece", "sized_scenario_yaml"),
             "virtual_solar_csv": _upstream("PvoutToVirtualSolarPiece", "virtual_solar_csv"),
             "technical_limits_json": _upstream("TechnicalLimitsPiece", "technical_limits_json"),
+            "battery_strategy_recommendation_json": _upstream(
+                "BatteryStrategyOptimizerPiece", "battery_strategy_recommendation_json"
+            ),
             "run_id": _upstream("UserInputPiece", "run_id"),
         },
     },

@@ -4069,7 +4069,7 @@
           "upstreamId": "",
           "upstreamArgument": "",
           "upstreamValue": "",
-          "value": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/inputs/load_and_prices.csv"
+          "value": "C:\\Users\\NTB\\Domino\\uc32_cbe4_test\\examples\\demo_site\\load_and_prices.csv"
         },
         "prices_csv": {
           "fromUpstream": false,
@@ -4083,7 +4083,7 @@
           "upstreamId": "",
           "upstreamArgument": "",
           "upstreamValue": "",
-          "value": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/inputs/scenario.yaml"
+          "value": "C:\\Users\\NTB\\Domino\\uc32_cbe4_test\\examples\\demo_site\\scenario.yaml"
         }
       }
     },

@@ -10,7 +10,7 @@ import pandas as pd
 from domino.base_piece import BasePiece
 
 from .models import InputModel, OutputModel
-from .render import build_html
+from .render import build_html, unit_prices_from_heatmap
 
 try:
     from common import onedata_io as od
@@ -56,6 +56,8 @@ class DashboardPiece(BasePiece):
             "daily": {"x": [], "without": [], "with": []},
             "monthly": {"x": [], "without": [], "with": []},
             "totals": {},
+            "interval": {},
+            "timestep": {},
             "legacy_chart": {"title": "", "x": [], "series": []},
         }
         frame = DashboardPiece._read_profile(profile_path)
@@ -80,15 +82,35 @@ class DashboardPiece(BasePiece):
             .groupby("month", as_index=False)[["without_kwh", "with_kwh"]]
             .sum()
         )
+        if len(monthly) >= 4:
+            core = monthly["without_kwh"].iloc[:-1]
+            if float(monthly["without_kwh"].iloc[-1]) < 0.4 * float(core.median()):
+                monthly = monthly.iloc[:-1]
 
         without_total = float(frame["without_kwh"].sum())
         with_total = float(frame["with_kwh"].sum())
+        dt_h = 0.25
+        if len(frame) >= 2:
+            step = frame["datetime"].diff().dt.total_seconds().median()
+            if pd.notna(step) and step > 0:
+                dt_h = float(step) / 3600.0
+        step_minutes = int(round(dt_h * 60.0))
+        start = frame["datetime"].iloc[0]
+        interval = {
+            "start": start.strftime("%Y-%m-%dT%H:%M:%S"),
+            "step_minutes": step_minutes,
+            "n": int(len(frame)),
+            "without_kw": (frame["without_kwh"] / max(dt_h, 1e-9)).round(2).tolist(),
+            "with_kw": (frame["with_kwh"] / max(dt_h, 1e-9)).round(2).tolist(),
+        }
         totals = {
             "without_kwh": round(without_total, 1),
             "with_kwh": round(with_total, 1),
             "saved_kwh": round(without_total - with_total, 1),
             "saved_pct": round((1.0 - with_total / without_total) * 100.0, 1) if without_total > 0 else None,
             "days": int(len(daily)),
+            "intervals": int(len(frame)),
+            "step_minutes": step_minutes,
         }
 
         legacy = {
@@ -122,6 +144,14 @@ class DashboardPiece(BasePiece):
                 "unit": "kWh/mesiac",
             },
             "totals": totals,
+            "interval": interval,
+            "timestep": {
+                "step_minutes": step_minutes,
+                "step_hours": round(dt_h, 6),
+                "intervals": int(len(frame)),
+                "period_start": str(frame["datetime"].iloc[0]),
+                "period_end": str(frame["datetime"].iloc[-1]),
+            },
             "legacy_chart": legacy,
         }
 
@@ -319,6 +349,102 @@ class DashboardPiece(BasePiece):
             },
         }
 
+    GRID_KG_CO2_PER_KWH = 0.155
+    GRID_CO2_SOURCE = (
+        "Emisná intenzita elektriny zo siete 0,155 kg CO₂/kWh (EEA, greenhouse gas "
+        "emission intensity of electricity generation, Slovensko). Úspora v tonách = "
+        "(kWh nákupu zo siete bez systému − kWh nákupu so systémom) × 0,155 / 1 000. "
+        "Počíta sa len vyhnutý nákup zo siete, nie životný cyklus panelov a batérie."
+    )
+
+    @classmethod
+    def _build_peaks(cls, report: dict) -> dict:
+        scenarios = report.get("scenarios") or {}
+        baseline = (scenarios.get("baseline") or {}).get("monthly_peak_detail") or {}
+        plant = (
+            (scenarios.get("optimized") or {}).get("monthly_peak_detail")
+            or (scenarios.get("pv_and_battery") or {}).get("monthly_peak_detail")
+            or {}
+        )
+        months = sorted(set(baseline) | set(plant))
+        without = [
+            round(float((baseline.get(m) or {}).get("monthly_peak_kw") or 0.0), 1) for m in months
+        ]
+        with_ = [
+            round(float((plant.get(m) or {}).get("monthly_peak_kw") or 0.0), 1) for m in months
+        ]
+        if len(without) >= 4:
+            core = sorted(without[:-1])
+            median = core[len(core) // 2]
+            if without[-1] < 0.4 * max(median, 1.0):
+                months, without, with_ = months[:-1], without[:-1], with_[:-1]
+        mrk = report.get("mrk_and_rv") or {}
+        return {
+            "x": months,
+            "without": without,
+            "with": with_,
+            "contract_kw": mrk.get("current_contract_rv_kw"),
+            "proposed_kw": mrk.get("recommended_rv_kw_conservative"),
+            "unit": "kW",
+        }
+
+    @classmethod
+    def _build_capex(cls, report: dict, heatmap: dict | None) -> dict:
+        cap = report.get("capex_inputs") or {}
+        resolved = ((report.get("equipment") or {}).get("resolved") or {})
+        rec = (heatmap or {}).get("recommended") or {}
+        resolved_kwp = float(resolved.get("installed_kwp") or 0.0)
+        resolved_kwh = float(resolved.get("energy_kwh") or 0.0)
+        pv_capex = float(cap.get("pv_capex_eur") or 0.0)
+        bat_capex = float(cap.get("battery_capex_eur") or 0.0)
+        eur_kwp = cap.get("specific_capex_eur_per_kwp")
+        eur_kwh = cap.get("specific_capex_eur_per_kwh")
+        try:
+            eur_kwp = float(eur_kwp) if eur_kwp is not None else None
+        except (TypeError, ValueError):
+            eur_kwp = None
+        try:
+            eur_kwh = float(eur_kwh) if eur_kwh is not None else None
+        except (TypeError, ValueError):
+            eur_kwh = None
+        if eur_kwp is None and resolved_kwp > 1e-9:
+            eur_kwp = pv_capex / resolved_kwp
+        if eur_kwh is None and resolved_kwh > 1e-9:
+            eur_kwh = bat_capex / resolved_kwh
+        inf_kwp, inf_kwh = unit_prices_from_heatmap(heatmap)
+        if eur_kwp is None:
+            eur_kwp = inf_kwp
+        if eur_kwh is None:
+            eur_kwh = inf_kwh
+        kwp = float(rec.get("pv_kwp") if rec.get("pv_kwp") is not None else resolved_kwp)
+        kwh = float(rec.get("battery_kwh") if rec.get("battery_kwh") is not None else resolved_kwh)
+        if eur_kwp is not None:
+            pv_capex = kwp * eur_kwp
+        if eur_kwh is not None:
+            bat_capex = kwh * eur_kwh
+        elif kwh <= 1e-9:
+            bat_capex = 0.0
+        return {
+            "pv_kwp": kwp,
+            "battery_kwh": kwh,
+            "eur_per_kwp": round(eur_kwp, 2) if eur_kwp is not None else None,
+            "eur_per_kwh": round(eur_kwh, 2) if eur_kwh is not None else None,
+            "pv_capex_eur": round(pv_capex, 2),
+            "battery_capex_eur": round(bat_capex, 2),
+            "total_capex_eur": round(pv_capex + bat_capex, 2),
+        }
+
+    @classmethod
+    def _build_co2(cls, consumption: dict) -> dict:
+        saved = float(((consumption.get("totals") or {}).get("saved_kwh") or 0.0))
+        kg = saved * cls.GRID_KG_CO2_PER_KWH
+        return {
+            "saved_kwh": round(saved, 1),
+            "kg_co2_per_kwh": cls.GRID_KG_CO2_PER_KWH,
+            "t_co2": round(kg / 1000.0, 2),
+            "method": cls.GRID_CO2_SOURCE,
+        }
+
     def piece_function(self, input_data: InputModel, secrets_data=None) -> OutputModel:
         _stage = None
         _piece_out = None
@@ -404,18 +530,35 @@ class DashboardPiece(BasePiece):
                     "uncertainty_method": unc.get("method"),
                     "rv_downsizing_potential_kw": mrk.get("rv_downsizing_potential_kw"),
                     "rv_fixed_fee_savings_period_eur": mrk.get("estimated_fixed_rv_fee_savings_if_resized_eur_for_period"),
+                    "proposed_mrk_kw": mrk.get("recommended_rv_kw_conservative"),
+                    "current_mrk_kw": mrk.get("current_contract_rv_kw"),
+                    "mrk_savings_annual_eur": mrk.get("estimated_fixed_rv_fee_savings_eur_per_year"),
+                    "mrk_peak_after_kw": mrk.get("max_monthly_peak_import_kw_after_optimization"),
+                    "mrk_fee_eur_per_kw_month": mrk.get("fee_eur_per_kw_month"),
+                    "mrk_safety_margin_pct": mrk.get("safety_margin_pct"),
+                    "mrk_peak_reserve_enabled": ((rep.get("mrk_peak_reserve") or {}).get("enabled")),
+                    "mrk_peak_reserve_reason": ((rep.get("mrk_peak_reserve") or {}).get("reason")),
+                    "mrk_peak_reserve_kwh": ((rep.get("mrk_peak_reserve") or {}).get("reserve_kwh")),
+                    "mrk_peak_reserve_benefit_eur": ((rep.get("mrk_peak_reserve") or {}).get("benefit_eur_year")),
+                    "mrk_peak_reserve_cost_eur": ((rep.get("mrk_peak_reserve") or {}).get("cost_eur_year")),
                     "trading_only_annual_margin_eur_estimate": ((rep.get("trading_only_analysis") or {}).get("annual_margin_eur_estimate")),
                     "battery_annual_equivalent_cycles_est": ((rep.get("battery_lifetime_assessment") or {}).get("annual_equivalent_cycles_est")),
                     "battery_estimated_life_years_effective": ((rep.get("battery_lifetime_assessment") or {}).get("estimated_life_years_effective")),
+                    "battery_estimated_life_years_by_cycles": ((rep.get("battery_lifetime_assessment") or {}).get("estimated_life_years_by_cycles")),
+                    "battery_cycle_life_at_eol": ((rep.get("battery_lifetime_assessment") or {}).get("cycle_life_at_eol")),
+                    "battery_calendar_life_years": ((rep.get("battery_lifetime_assessment") or {}).get("calendar_life_years")),
                     "finance_annual_net_cashflow_after_finance_eur": ((rep.get("finance_layer") or {}).get("annual_net_cashflow_after_finance_eur")),
                     "finance_npv_after_finance_eur": ((rep.get("finance_layer") or {}).get("npv_after_finance_eur")),
                     "battery_kwh": ((rep.get("equipment") or {}).get("resolved") or {}).get("energy_kwh"),
                     "discount_rate": ((rep.get("equipment") or {}).get("investment_metrics") or {}).get("discount_rate"),
                     "analysis_horizon_years": ((rep.get("equipment") or {}).get("investment_metrics") or {}).get("analysis_horizon_years"),
+                    "distribution_eur_per_kwh": ((rep.get("economics") or {}).get("distribution_eur_per_kwh")),
+                    "feed_in_surplus_eur_per_kwh": ((rep.get("economics") or {}).get("feed_in_surplus_eur_per_kwh")),
                 },
                 "single_chart": chart,
                 "consumption": consumption,
                 "prices": prices,
+                "mrk_proposal": mrk,
                 "battery_lifetime_assessment": (rep.get("battery_lifetime_assessment") or {}),
                 "c_rate_sweep": (rep.get("c_rate_sweep") or []),
                 "trading_only_analysis": (rep.get("trading_only_analysis") or {}),
@@ -432,12 +575,25 @@ class DashboardPiece(BasePiece):
             heatmap = self._read_json(input_data.heatmap_json)
             calibration = self._read_json(input_data.calibration_json)
             ranking = self._read_json(input_data.catalog_ranked_recommendation_json)
+            peaks = self._build_peaks(rep)
+            capex = self._build_capex(rep, heatmap)
+            co2 = self._build_co2(consumption)
             if heatmap:
                 payload["sizing_heatmap"] = heatmap
             if calibration:
                 payload["forecast_calibration"] = calibration
             if ranking:
                 payload["equipment_ranking"] = ranking
+            hardware = ((rep.get("equipment") or {}).get("hardware_recommendation") or {})
+            if hardware:
+                payload["hardware_recommendation"] = hardware
+            payload["peaks"] = peaks
+            payload["capex_breakdown"] = capex
+            payload["co2"] = co2
+            payload["timestep"] = consumption.get("timestep") or {
+                "step_hours": (rep.get("meta") or {}).get("dt_hours"),
+                "intervals": (rep.get("meta") or {}).get("intervals"),
+            }
 
             out_json = out_dir / "dashboard_data.json"
             out_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")

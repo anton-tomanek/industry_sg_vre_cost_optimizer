@@ -1,15 +1,26 @@
 # UC3.2 Industry SG VRE Cost Optimizer
 
-Domino pieces repository. Register `filipchrvala/industry_sg_vre_cost_optimizer` at version `0.1.45`, then import `UC3.2.customization`.
+Domino pieces repository. Register `filipchrvala/industry_sg_vre_cost_optimizer` at version `0.1.46`, then import `UC3.2.customization`.
 
-Upload these files to OneData **before the first run** (create the `inputs` folder if it is missing):
+## Vstupy v Dominu
 
-- `onedata:///SCDI/UC3.2_COST_OPTIMIZER/inputs/load_and_prices.csv`
-- `onedata:///SCDI/UC3.2_COST_OPTIMIZER/inputs/scenario.yaml`
+Nie je to JSON z lokálneho formulára. `UserInputPiece` v Dominu číta **dva súbory**:
 
-Samples are in `examples/demo_site/`. The load file may be named `load.csv` locally, but the import looks for **`load_and_prices.csv`**. `prices_csv` stays empty.
+- `onedata:///SCDI/UC3.2_COST_OPTIMIZER/inputs/load_and_prices.csv` — odber (datetime + výkon; ceny voliteľné)
+- `onedata:///SCDI/UC3.2_COST_OPTIMIZER/inputs/scenario.yaml` — všetky polia z formulára (lokalita, CAPEX, krok batérie, MRK, …)
 
-Prices are optional. If `load_csv` has no usable `price_eur_per_kwh` and `prices_csv` is empty, UserInputPiece pulls OKTE day-ahead prices for the same datetime range as the load.
+`prices_csv` ostáva prázdne. `user_input_summary_json` je **výstup** UserInputPiece (zdroj cien, pokrytie OKTE, časový rozsah), nie vstup z formulára.
+
+Ako dostať to, čo ste vyplnili lokálne:
+
+1. Spustite výpočet na webe, alebo aspoň uložte formulár.
+2. Súbory sú v `.local_web/inputs/` (`load_and_prices.csv`, `scenario.yaml`). Hotový YAML je aj `.local_run/UserInputPiece/scenario_resolved.yaml`.
+3. Tie dva súbory nahrajte na OneData cesty vyššie (priečinok `inputs` vytvorte, ak chýba).
+4. V Dominu naštartujte importovaný workflow — `UserInputPiece` už na tieto cesty ukazuje.
+
+Vzory sú v `examples/demo_site/`. Lokálny súbor môže byť `load.csv`, import hľadá **`load_and_prices.csv`**.
+
+Ceny sú voliteľné. Ak `load_csv` nemá použiteľný `price_eur_per_kwh` a `prices_csv` je prázdne, UserInputPiece stiahne OKTE day-ahead ceny pre rovnaký dátumový rozsah ako odber.
 
 ## Lokálne cez web (bez Domina)
 
