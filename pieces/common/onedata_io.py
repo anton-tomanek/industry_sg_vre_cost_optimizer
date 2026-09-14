@@ -462,33 +462,134 @@ class StageHandle:
     def __init__(self) -> None:
         self.tmpdirs: list[str] = []
         self.active: bool = False
+        self.local_to_remote: dict[str, str] = {}
 
     def cleanup(self) -> None:
         for d in self.tmpdirs:
             shutil.rmtree(d, ignore_errors=True)
         self.tmpdirs.clear()
+        self.local_to_remote.clear()
+
+
+def _collect_remote_paths(val: Any, *, skip_keys: set[str] | None = None) -> list[str]:
+    skip = skip_keys or _STAGE_SKIP_FIELDS
+    found: list[str] = []
+    if isinstance(val, str):
+        text = normalize_remote_path(val)
+        if has_protocol(text):
+            found.append(text)
+    elif isinstance(val, dict):
+        for key, item in val.items():
+            if key in skip:
+                continue
+            found.extend(_collect_remote_paths(item, skip_keys=skip))
+    elif isinstance(val, list):
+        for item in val:
+            found.extend(_collect_remote_paths(item, skip_keys=skip))
+    return found
+
+
+def _download_remote(val: str, stage: StageHandle, field: str) -> str:
+    import tempfile
+
+    if isdir(val):
+        tmp = tempfile.mkdtemp(prefix="od_in_")
+        stage.tmpdirs.append(tmp)
+        local_dir = os.path.join(tmp, _remote_name(val) or "dir")
+        os.makedirs(local_dir, exist_ok=True)
+        for entry in listdir(val):
+            if isfile(entry):
+                write_bytes(os.path.join(local_dir, _remote_name(entry)), read_bytes(entry))
+        local = os.path.abspath(local_dir)
+        stage.local_to_remote[local.replace("\\", "/")] = val.rstrip("/")
+        return local
+    if isfile(val):
+        tmp = tempfile.mkdtemp(prefix="od_in_")
+        stage.tmpdirs.append(tmp)
+        local_f = os.path.join(tmp, _remote_name(val))
+        write_bytes(local_f, read_bytes(val))
+        local = os.path.abspath(local_f)
+        stage.local_to_remote[local.replace("\\", "/")] = val
+        return local
+    raise FileNotFoundError(
+        f"OneData input missing for '{field}': {val}. "
+        "Upstream piece may not have mirrored output; check DAG edges."
+    )
+
+
+def _stage_tree(val: Any, stage: StageHandle, *, key: str | None = None) -> Any:
+    if isinstance(val, str):
+        if key in _STAGE_SKIP_FIELDS:
+            return val
+        text = normalize_remote_path(val)
+        if not has_protocol(text):
+            return val
+        return _download_remote(text, stage, key or "path")
+    if isinstance(val, dict):
+        return {k: _stage_tree(v, stage, key=k) for k, v in val.items()}
+    if isinstance(val, list):
+        return [_stage_tree(item, stage, key=key) for item in val]
+    return val
+
+
+def _restore_tree(val: Any, mapping: dict[str, str]) -> Any:
+    if isinstance(val, str):
+        norm = os.path.abspath(val).replace("\\", "/") if not has_protocol(val) else val
+        if has_protocol(val):
+            return val
+        for local, remote in mapping.items():
+            local_n = local.replace("\\", "/").rstrip("/")
+            if norm == local_n:
+                return remote
+            prefix = local_n + "/"
+            if norm.startswith(prefix):
+                rel = norm[len(prefix) :]
+                return f"{remote.rstrip('/')}/{rel}"
+        return val
+    if isinstance(val, dict):
+        return {k: _restore_tree(v, mapping) for k, v in val.items()}
+    if isinstance(val, list):
+        return [_restore_tree(item, mapping) for item in val]
+    return val
+
+
+def restore_staged_paths(output: Any, stage: StageHandle | None) -> Any:
+    """Map staged local temp paths in outputs back to the original OneData URLs."""
+    if output is None or stage is None or not stage.local_to_remote:
+        return output
+    dumped = None
+    try:
+        dumped = output.model_dump()
+    except Exception:
+        return output
+    restored = _restore_tree(dumped, stage.local_to_remote)
+    if restored == dumped:
+        return output
+    try:
+        return type(output).model_validate(restored)
+    except Exception:
+        try:
+            return output.model_copy(update=restored)
+        except Exception:
+            return output
 
 
 def stage_inputs(input_data: Any, secrets_data: Any):
     """Download any ``onedata://`` input fields to a local temp dir.
 
-    Returns ``(input_data, StageHandle)``. When OneData is not configured the
-    input is returned unchanged (local-only behaviour). Handles both single
-    files and directories (e.g. a folder of ``load*.csv``).
+    Recurses into nested dicts/lists (payloads, ModelSpec bundles). Returns
+    ``(input_data, StageHandle)``. No-op when there are no remote paths.
     """
-    import tempfile
-
     stage = StageHandle()
     try:
         values = input_data.model_dump()
     except Exception:
         return input_data, stage
 
-    remote_fields = [
-        name for name, val in values.items()
-        if isinstance(val, str) and has_protocol(normalize_remote_path(val))
-    ]
-    if remote_fields and not configure_onedata(secrets_data, force=True):
+    remote_paths = _collect_remote_paths(values)
+    if not remote_paths:
+        return input_data, stage
+    if not configure_onedata(secrets_data, force=True):
         eff = effective_secrets(secrets_data, use_defaults=True)
         raise ValueError(
             "OneData input paths require onedata_token. "
@@ -496,62 +597,33 @@ def stage_inputs(input_data: Any, secrets_data: Any):
             f"{eff.get('onedata_output_dir')}). "
             "Set env ONEDATA_TOKEN or mount token at ONEDATA_TOKEN_FILE "
             f"(default {DEFAULT_TOKEN_FILE}). "
-            f"Fields: {', '.join(remote_fields)}"
+            f"Paths: {', '.join(remote_paths[:8])}"
         )
 
-    overrides: dict[str, str] = {}
-    for name, val in values.items():
-        if not isinstance(val, str):
-            continue
-        val = normalize_remote_path(val)
-        if not has_protocol(val):
-            continue
-        if name in _STAGE_SKIP_FIELDS:
-            continue
-        try:
-            if isdir(val):
-                tmp = tempfile.mkdtemp(prefix="od_in_")
-                stage.tmpdirs.append(tmp)
-                local_dir = os.path.join(tmp, _remote_name(val) or "dir")
-                os.makedirs(local_dir, exist_ok=True)
-                for entry in listdir(val):
-                    if isfile(entry):
-                        write_bytes(os.path.join(local_dir, _remote_name(entry)),
-                                    read_bytes(entry))
-                overrides[name] = local_dir
-            elif isfile(val):
-                tmp = tempfile.mkdtemp(prefix="od_in_")
-                stage.tmpdirs.append(tmp)
-                local_f = os.path.join(tmp, _remote_name(val))
-                write_bytes(local_f, read_bytes(val))
-                overrides[name] = local_f
-            else:
-                raise FileNotFoundError(
-                    f"OneData input missing for '{name}': {val}. "
-                    "Upstream piece may not have mirrored output; check DAG edges "
-                    "(Predict -> Solar/Battery) and re-import test_sus_onedata.customization."
-                )
-        except Exception as exc:
-            host = (effective_secrets(secrets_data, use_defaults=True) or {}).get(
-                "onedata_onezone_host", DEFAULT_ONEZONE_HOST
-            )
-            raise RuntimeError(
-                f"Failed to download OneData input '{name}' ({val}): {exc}. "
-                f"Host {host} must be reachable from the piece container. "
-                "On local Domino (PC without VPN in Docker) use test_sus_local.customization "
-                "and scripts/seed_shared_storage.py instead of OneData paths."
-            ) from exc
+    try:
+        staged = _stage_tree(values, stage)
+    except Exception as exc:
+        host = (effective_secrets(secrets_data, use_defaults=True) or {}).get(
+            "onedata_onezone_host", DEFAULT_ONEZONE_HOST
+        )
+        raise RuntimeError(
+            f"Failed to download OneData input ({exc}). "
+            f"Host {host} must be reachable from the piece container."
+        ) from exc
 
-    if overrides:
+    if staged != values:
         stage.active = True
         try:
-            input_data = input_data.model_copy(update=overrides)
+            input_data = type(input_data).model_validate(staged)
         except Exception:
-            for k, v in overrides.items():
-                try:
-                    setattr(input_data, k, v)
-                except Exception:
-                    object.__setattr__(input_data, k, v)
+            try:
+                input_data = input_data.model_copy(update=staged)
+            except Exception:
+                for key, item in staged.items():
+                    try:
+                        setattr(input_data, key, item)
+                    except Exception:
+                        object.__setattr__(input_data, key, item)
     return input_data, stage
 
 
@@ -663,41 +735,53 @@ def _rel_under_results(val: str, results_path: str | os.PathLike) -> str | None:
     return None
 
 
+def _rewrite_tree(val: Any, results_path: str | os.PathLike, base: str) -> Any:
+    if isinstance(val, str):
+        rel = _rel_under_results(val, results_path)
+        if rel is not None:
+            return f"{base}/{rel}" if rel else base
+        return val
+    if isinstance(val, dict):
+        return {k: _rewrite_tree(v, results_path, base) for k, v in val.items()}
+    if isinstance(val, list):
+        return [_rewrite_tree(item, results_path, base) for item in val]
+    return val
+
+
 def rewrite_output_paths(output: Any, results_path: str | os.PathLike,
                          onedata_target: str) -> Any:
     """Rewrite OutputModel path fields from local ``results_path`` to OneData URLs.
 
-    Domino passes output path strings to downstream pieces; after mirror-out those
-    paths must be ``onedata:///...`` so the next piece can stage them in.
+    Recurses into nested dicts/lists (``model_spec``, ``artifacts``). Domino
+    passes those strings downstream; after mirror-out they must be
+    ``onedata:///...`` so the next piece can stage them in.
     """
     if output is None:
         return output
     base = onedata_target.rstrip("/")
-    updates: dict[str, Any] = {}
+    try:
+        dumped = output.model_dump()
+    except Exception:
+        dumped = None
+    if dumped is not None:
+        rewritten = _rewrite_tree(dumped, results_path, base)
+        if rewritten == dumped:
+            return output
+        try:
+            return type(output).model_validate(rewritten)
+        except Exception:
+            try:
+                return output.model_copy(update=rewritten)
+            except Exception:
+                return output
 
+    updates: dict[str, Any] = {}
     fields = getattr(output, "model_fields", None) or getattr(output, "__fields__", {})
     for name in fields:
         val = getattr(output, name, None)
-        if isinstance(val, str):
-            rel = _rel_under_results(val, results_path)
-            if rel is not None:
-                updates[name] = f"{base}/{rel}" if rel else base
-        elif isinstance(val, list):
-            new_list = []
-            changed = False
-            for item in val:
-                if isinstance(item, str):
-                    rel = _rel_under_results(item, results_path)
-                    if rel is not None:
-                        new_list.append(f"{base}/{rel}" if rel else base)
-                        changed = True
-                    else:
-                        new_list.append(item)
-                else:
-                    new_list.append(item)
-            if changed:
-                updates[name] = new_list
-
+        new_val = _rewrite_tree(val, results_path, base)
+        if new_val != val:
+            updates[name] = new_val
     if not updates:
         return output
     if hasattr(output, "model_copy"):
@@ -712,14 +796,15 @@ def finish_piece(output: Any, results_path: str | os.PathLike, secrets_data: Any
                  *, registry_local: str | None = None,
                  registry_target: str | None = None,
                  run_id: str | None = None) -> Any:
-    """Mirror results to OneData, clean up staging, return output with onedata paths."""
+    """Mirror results to OneData, restore pass-through URLs, then clean staging."""
     if registry_local and registry_target:
         upload_registry(registry_local, registry_target)
     target = mirror_results(results_path, secrets_data, piece_name, run_id=run_id)
+    if target and output is not None:
+        output = rewrite_output_paths(output, results_path, target)
+    output = restore_staged_paths(output, stage)
     if stage is not None:
         stage.cleanup()
-    if target and output is not None:
-        return rewrite_output_paths(output, results_path, target)
     return output
 
 

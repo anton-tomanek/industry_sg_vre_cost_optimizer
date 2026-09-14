@@ -20,7 +20,14 @@ except ModuleNotFoundError:
 from .models import InputModel, OutputModel
 
 
+try:
+    from common.piece_onedata import onedata_piece
+except ModuleNotFoundError:
+    from pieces.common.piece_onedata import onedata_piece
+
+
 class PvoutStagedInferenceSpecPiece(BasePiece):
+    @onedata_piece("PvoutStagedInferenceSpecPiece")
     def piece_function(self, input_data: InputModel, secrets_data=None) -> OutputModel:
         feats = list(input_data.feature_columns or [])
         if not feats:

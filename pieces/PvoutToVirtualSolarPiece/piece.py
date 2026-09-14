@@ -56,7 +56,14 @@ def _read_csv_any_separator(path: Path) -> pd.DataFrame:
     return pd.read_csv(path)
 
 
+try:
+    from common.piece_onedata import onedata_piece
+except ModuleNotFoundError:
+    from pieces.common.piece_onedata import onedata_piece
+
+
 class PvoutToVirtualSolarPiece(BasePiece):
+    @onedata_piece("PvoutToVirtualSolarPiece")
     def piece_function(self, input_data: InputModel, secrets_data=None) -> OutputModel:
         src = Path(str(input_data.forecast_csv_path))
         if not src.is_file():

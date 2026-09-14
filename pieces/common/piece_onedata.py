@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import inspect
+from functools import wraps
 from typing import Any, Callable, TypeVar
 
 T = TypeVar("T")
@@ -44,6 +46,16 @@ def finish_or_return(
     return output
 
 
+def _call_piece(fn, self, input_data, secrets_data, run_id):
+    params = inspect.signature(fn).parameters
+    kwargs: dict[str, Any] = {}
+    if "secrets_data" in params:
+        kwargs["secrets_data"] = secrets_data
+    if "run_id" in params:
+        kwargs["run_id"] = run_id
+    return fn(self, input_data, **kwargs)
+
+
 def onedata_piece(
     piece_name: str,
     *,
@@ -52,7 +64,8 @@ def onedata_piece(
     """Decorator: stage OneData inputs, mirror outputs to per-run folder."""
 
     def decorator(fn: Callable[..., T]) -> Callable[..., T]:
-        def wrapper(self, input_data, secrets_data=None) -> T:
+        @wraps(fn)
+        def wrapper(self, input_data, secrets_data=None, **_extra) -> T:
             od = import_onedata_io()
             stage = None
             piece_out = None
@@ -61,7 +74,7 @@ def onedata_piece(
                 input_data, stage = od.stage_inputs(input_data, secrets_data)
                 run_id = run_id_for_piece(od, input_data, secrets_data, entry=entry)
             try:
-                piece_out = fn(self, input_data, secrets_data, run_id=run_id)
+                piece_out = _call_piece(fn, self, input_data, secrets_data, run_id)
             except Exception:
                 if od is not None and piece_out is None:
                     od.cleanup_on_error(

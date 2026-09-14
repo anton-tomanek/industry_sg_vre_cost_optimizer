@@ -9,7 +9,14 @@ from .models import InputModel, OutputModel
 TREE_MODELS = {"xgb_regressor_model", "interval_xgb_regressor_model", "eda_rule_baseline"}
 
 
+try:
+    from common.piece_onedata import onedata_piece
+except ModuleNotFoundError:
+    from pieces.common.piece_onedata import onedata_piece
+
+
 class ModelDeciderPiece(BasePiece):
+    @onedata_piece("ModelDeciderPiece")
     def piece_function(self, input_data: InputModel):
         self.logger.info("Running ModelDeciderPiece.")
 

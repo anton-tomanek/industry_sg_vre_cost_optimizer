@@ -73,7 +73,14 @@ class Normalizations:
         return X
 
 
+try:
+    from common.piece_onedata import onedata_piece
+except ModuleNotFoundError:
+    from pieces.common.piece_onedata import onedata_piece
+
+
 class DataNormalizationPiece(BasePiece):
+    @onedata_piece("DataNormalizationPiece")
     def piece_function(self, input_data: InputModel):
         def _to_serializable_dataframe_like(df_like):
             """

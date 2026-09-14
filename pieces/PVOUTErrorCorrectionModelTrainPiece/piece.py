@@ -3,8 +3,14 @@ from domino.base_piece import BasePiece
 from .models import InputModel, ModelSpec, OutputModel
 from .utils.model_decider import MODEL_TYPES, TrainedModel, train_model
 
+try:
+    from common.piece_onedata import onedata_piece
+except ModuleNotFoundError:
+    from pieces.common.piece_onedata import onedata_piece
+
 
 class PVOUTErrorCorrectionModelTrainPiece(BasePiece):
+    @onedata_piece("PVOUTErrorCorrectionModelTrainPiece")
     def piece_function(self, input_data: InputModel):
         import csv
         import json
