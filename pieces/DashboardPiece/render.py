@@ -367,6 +367,14 @@ def section(title: str, hint: str = "", i18n: str = "", i18n_tip: str = "") -> s
     return f"<h2>{label}{tip(hint, i18n=i18n_tip)}</h2>"
 
 
+def is_markup(value: Any) -> bool:
+    return str(value).lstrip().startswith("<")
+
+
+def render_val(value: Any) -> str:
+    return str(value) if is_markup(value) else esc(value)
+
+
 def card(
     label: str,
     value: str,
@@ -392,11 +400,13 @@ def card(
     if rec_only:
         attrs += ' data-rec-only="1"'
         attrs += f' data-original="{esc(value)}"'
+        if is_markup(value):
+            attrs += ' data-original-html="1"'
         attrs += f' data-original-note="{esc(note)}"'
         attrs += f' data-original-tone="{esc(tone)}"'
     return (
         f'<div class="card"{attrs}><div class="label">{labeled(label, hint, i18n=i18n, i18n_tip=i18n_tip)}</div>'
-        f'<div class="value{tone_class}">{esc(value)}</div>{note_html}</div>'
+        f'<div class="value{tone_class}">{render_val(value)}</div>{note_html}</div>'
     )
 
 
@@ -642,9 +652,11 @@ def detail_row(
     if rec_only:
         attrs += ' data-rec-only="1"'
         attrs += f' data-original="{esc(value)}"'
+        if is_markup(value):
+            attrs += ' data-original-html="1"'
     return (
         f"<tr{attrs}><td>{labeled(label, hint, i18n=i18n, i18n_tip=i18n_tip)}</td>"
-        f"<td class='num'>{value if str(value).lstrip().startswith('<') else esc(value)}</td></tr>"
+        f"<td class='num'>{render_val(value)}</td></tr>"
     )
 
 
@@ -2014,12 +2026,18 @@ _HEATMAP_JS = r"""
       "<tr class='total'><td>" + t("capex.total", "Spolu CAPEX") + "</td><td class='eq'>" + t("capex.together", "FVE + batéria") + "</td><td class='num'>" + money(total) + "</td></tr>" +
       "</tbody></table>";
   }
+  function setRich(el, text, asHtml) {
+    if (!el) return;
+    var s = text == null ? "" : String(text);
+    if (asHtml || s.trim().charAt(0) === "<") el.innerHTML = s;
+    else el.textContent = s;
+  }
   function setCard(key, text, note, tone) {
     var el = document.querySelector('.card[data-live="' + key + '"]');
     if (!el) return;
     var val = el.querySelector(".value");
     if (val) {
-      val.textContent = text;
+      setRich(val, text);
       val.className = "value" + (tone ? " " + tone : "");
     }
     var n = el.querySelector(".note");
@@ -2027,13 +2045,13 @@ _HEATMAP_JS = r"""
   }
   function setDetail(key, text) {
     var el = document.querySelector('#live-details [data-live="' + key + '"] td.num');
-    if (el) el.textContent = text;
+    if (el) setRich(el, text);
   }
   function restoreRecOnly() {
     document.querySelectorAll("[data-rec-only='1']").forEach(function (el) {
       var val = el.querySelector(".value") || el.querySelector("td.num");
       if (!val) return;
-      val.textContent = el.getAttribute("data-original") || "—";
+      setRich(val, el.getAttribute("data-original") || "—", el.getAttribute("data-original-html") === "1");
       if (el.classList.contains("card")) {
         var tone = el.getAttribute("data-original-tone") || "";
         val.className = "value" + (tone ? " " + tone : "");
