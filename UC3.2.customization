@@ -1,7 +1,7 @@
 {
   "workflowPieces": {
     "101_c0855de1-a373-5273-a2a0-8cd79260fdc3": {
-      "id": 100,
+      "id": 1682,
       "name": "UserInputPiece",
       "description": "Validate MRK workflow input files",
       "dependency": {
@@ -120,28 +120,27 @@
         "title": "SecretsModel",
         "type": "object"
       },
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 128
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [],
       "style": {
-        "node_label": "UserInputPiece",
-        "icon_class_name": "fa-solid:file-lines"
+        "module": "UserInputPiece",
+        "label": "UserInputPiece",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:file-lines",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/UserInputPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "102_2c7aab61-5fbf-50d4-88a6-1b49db944113": {
-      "id": 100,
+      "id": 1686,
       "name": "CatalogSyncPiece",
       "description": "Sync PV and inverter catalogs from online SAM sources",
       "dependency": {
@@ -252,28 +251,27 @@
         "title": "SecretsModel",
         "type": "object"
       },
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 128
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [],
       "style": {
-        "node_label": "CatalogSyncPiece",
-        "icon_class_name": "fa-solid:cloud-arrow-down"
+        "module": "CatalogSyncPiece",
+        "label": "CatalogSyncPiece",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:cloud-arrow-down",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/CatalogSyncPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "103_e28f91b5-ea2e-58aa-a6ca-7e0f56400106": {
-      "id": 100,
+      "id": 1692,
       "name": "TechnicalLimitsPiece",
       "description": "Compute technical PV and battery bounds from constraints",
       "dependency": {
@@ -375,28 +373,27 @@
         "title": "SecretsModel",
         "type": "object"
       },
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 128
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [],
       "style": {
-        "node_label": "TechnicalLimitsPiece",
-        "icon_class_name": "fa-solid:ruler-combined"
+        "module": "TechnicalLimitsPiece",
+        "label": "TechnicalLimitsPiece",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:ruler-combined",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/TechnicalLimitsPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "104_d09d4e0c-fb3d-5ad5-9186-3d5ed80bf128": {
-      "id": 100,
+      "id": 1696,
       "name": "OpenMeteoPVDataPiece",
       "description": "Fetch Open-Meteo irradiance/weather for any latitude/longitude and emit PVOUT training CSV (GHI/DNI/DIF/PVOUT/…) for UC3.4 preprocessing. No commercial weather-data license.",
       "dependency": {
@@ -544,32 +541,31 @@
         "type": "object"
       },
       "secrets_schema": {},
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 512
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [
         "OpenMeteo",
         "PVOUT",
         "Generator"
       ],
       "style": {
-        "node_label": "Open-Meteo PV Data",
-        "icon_class_name": "fa-solid:bolt"
+        "module": "OpenMeteoPVDataPiece",
+        "label": "Open-Meteo PV Data",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:bolt",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/OpenMeteoPVDataPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "105_147b3275-3cfe-55e6-be21-deaf354d1392": {
-      "id": 100,
+      "id": 1678,
       "name": "ShmuCalibrationPiece",
       "description": "Calibrate modelled Open-Meteo irradiance against measured SHMU global radiation for the nearest Slovak station, and emit a measurement-based training target for the PVOUT error-correction model.",
       "dependency": {
@@ -703,40 +699,31 @@
         "title": "SecretsModel",
         "type": "object"
       },
-      "container_resources": {
-        "requests": {
-          "cpu": 200,
-          "memory": 256
-        },
-        "limits": {
-          "cpu": 1000,
-          "memory": 1024
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [
         "SHMU",
         "Calibration",
         "PVOUT"
       ],
       "style": {
-        "node_label": "SHMÚ Calibration",
-        "node_type": "default",
-        "node_style": {
+        "module": "ShmuCalibrationPiece",
+        "label": "SHMÚ Calibration",
+        "nodeType": "default",
+        "nodeStyle": {
           "backgroundColor": "#ebebeb"
         },
         "useIcon": true,
-        "icon_class_name": "fa-solid:crosshairs",
+        "iconClassName": "fa-solid:crosshairs",
         "iconStyle": {
           "cursor": "pointer"
         }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/ShmuCalibrationPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "106_2f5b3d60-881d-5bfa-b98d-57827306daeb": {
-      "id": 100,
+      "id": 1700,
       "name": "DataPreprocessingPiece",
       "description": "Template piece for cleaning, validating, and preprocessing input data prior to feature engineering or training.",
       "dependency": {
@@ -889,32 +876,31 @@
         "type": "object"
       },
       "secrets_schema": {},
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 512
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [
         "Template",
         "Data",
         "Preprocessing"
       ],
       "style": {
-        "node_label": "Data Preprocessing",
-        "icon_class_name": "fa-solid:filter"
+        "module": "DataPreprocessingPiece",
+        "label": "Data Preprocessing",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:filter",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/DataPreprocessingPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "107_7193e3c8-4851-5332-8dff-e67b12dc83ab": {
-      "id": 100,
+      "id": 1695,
       "name": "ModelDeciderPiece",
       "description": "Template piece for selecting a model/version based on context, data availability, or policies.",
       "dependency": {
@@ -1069,32 +1055,31 @@
         "type": "object"
       },
       "secrets_schema": {},
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 512
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [
         "Template",
         "Model",
         "Routing"
       ],
       "style": {
-        "node_label": "Model Decider",
-        "icon_class_name": "fa-solid:code-branch"
+        "module": "ModelDeciderPiece",
+        "label": "Model Decider",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:code-branch",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/ModelDeciderPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "108_dcede799-7f3e-57bb-b4a4-0d5567602e0a": {
-      "id": 100,
+      "id": 1688,
       "name": "DataNormalizationPiece",
       "description": "Template piece for normalizing raw smart-grid data into a consistent scale and schema.",
       "dependency": {
@@ -1257,32 +1242,31 @@
         "type": "object"
       },
       "secrets_schema": {},
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 512
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [
         "Template",
         "Data",
         "Normalization"
       ],
       "style": {
-        "node_label": "Data Normalization",
-        "icon_class_name": "fa-solid:scale-balanced"
+        "module": "DataNormalizationPiece",
+        "label": "Data Normalization",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:scale-balanced",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/DataNormalizationPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "109_965a628d-3427-5d65-85c0-ec7ef12fd0c4": {
-      "id": 100,
+      "id": 1685,
       "name": "PvoutModelFeatureSelectPiece",
       "description": "Split UC3.4 feature_columns into model features + datetime_column without removing datetime from CSV.",
       "dependency": {
@@ -1358,40 +1342,31 @@
         "type": "object"
       },
       "secrets_schema": {},
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 128
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [
         "somes",
         "pv",
         "uc3.4-adapter"
       ],
       "style": {
-        "node_label": "PVOUT Feature Select",
-        "node_type": "default",
-        "node_style": {
+        "module": "PvoutModelFeatureSelectPiece",
+        "label": "PVOUT Feature Select",
+        "nodeType": "default",
+        "nodeStyle": {
           "backgroundColor": "#ebebeb"
         },
         "useIcon": true,
-        "icon_class_name": "fa-solid:filter",
+        "iconClassName": "fa-solid:filter",
         "iconStyle": {
           "cursor": "pointer"
         }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/PvoutModelFeatureSelectPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "110_4fb2c838-4389-5d3a-b6fa-cb748937a818": {
-      "id": 100,
+      "id": 1680,
       "name": "PVOUTPredictionModelTrainPiece",
       "description": "Template piece for training a PVOUT prediction model.",
       "dependency": {
@@ -1669,17 +1644,7 @@
         "type": "object"
       },
       "secrets_schema": {},
-      "container_resources": {
-        "requests": {
-          "cpu": 200,
-          "memory": 256
-        },
-        "limits": {
-          "cpu": 1000,
-          "memory": 2048
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [
         "Template",
         "Train",
@@ -1687,15 +1652,24 @@
         "Prediction"
       ],
       "style": {
-        "node_label": "Train PVOUT Prediction Model",
-        "icon_class_name": "fa-solid:brain"
+        "module": "PVOUTPredictionModelTrainPiece",
+        "label": "Train PVOUT Prediction Model",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:brain",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/PVOUTPredictionModelTrainPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "111_90d0829b-102c-5a3b-828b-73c90ee17ef7": {
-      "id": 100,
+      "id": 1683,
       "name": "PVOUTErrorCorrectionModelTrainPiece",
       "description": "Template piece for training a PVOUT error-correction model.",
       "dependency": {
@@ -1999,17 +1973,7 @@
         "type": "object"
       },
       "secrets_schema": {},
-      "container_resources": {
-        "requests": {
-          "cpu": 200,
-          "memory": 256
-        },
-        "limits": {
-          "cpu": 1000,
-          "memory": 2048
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [
         "Template",
         "Train",
@@ -2017,15 +1981,24 @@
         "ErrorCorrection"
       ],
       "style": {
-        "node_label": "Train PVOUT Error Correction Model",
-        "icon_class_name": "fa-solid:sliders"
+        "module": "PVOUTErrorCorrectionModelTrainPiece",
+        "label": "Train PVOUT Error Correction Model",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:sliders",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/PVOUTErrorCorrectionModelTrainPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "112_b9d15107-b16e-52a8-8602-35b885ee4898": {
-      "id": 100,
+      "id": 1699,
       "name": "PvoutStagedInferenceSpecPiece",
       "description": "Build InferencePiece.pvout_model stages: Open-Meteo baseline + UC3.4 error correction.",
       "dependency": {
@@ -2123,40 +2096,31 @@
         "type": "object"
       },
       "secrets_schema": {},
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 128
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [
         "somes",
         "pv",
         "uc3.4-adapter"
       ],
       "style": {
-        "node_label": "PVOUT Staged Spec",
-        "node_type": "default",
-        "node_style": {
+        "module": "PvoutStagedInferenceSpecPiece",
+        "label": "PVOUT Staged Spec",
+        "nodeType": "default",
+        "nodeStyle": {
           "backgroundColor": "#ebebeb"
         },
         "useIcon": true,
-        "icon_class_name": "fa-solid:diagram-project",
+        "iconClassName": "fa-solid:diagram-project",
         "iconStyle": {
           "cursor": "pointer"
         }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/PvoutStagedInferenceSpecPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "113_d8595140-c9e3-543c-986e-55fd33a1128f": {
-      "id": 100,
+      "id": 1689,
       "name": "InferencePiece",
       "description": "Runs inference on prepared features: pvout_correction or price_ahead (base + model correction).",
       "dependency": {
@@ -2574,32 +2538,31 @@
         "type": "object"
       },
       "secrets_schema": {},
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 512
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [
         "Template",
         "Model",
         "Inference"
       ],
       "style": {
-        "node_label": "Inference",
-        "icon_class_name": "fa-solid:bolt"
+        "module": "InferencePiece",
+        "label": "Inference",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:bolt",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/InferencePiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "114_1965d058-d1f6-5f49-96fd-f20d6363ef7f": {
-      "id": 100,
+      "id": 1694,
       "name": "PvoutToVirtualSolarPiece",
       "description": "Adapter: UC3.4 Inference forecast CSV → SoMES virtual_solar.csv (datetime, pv_kw).",
       "dependency": {
@@ -2685,40 +2648,31 @@
         "type": "object"
       },
       "secrets_schema": {},
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 128
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [
         "somes",
         "pv",
         "uc3.4-adapter"
       ],
       "style": {
-        "node_label": "PVOUT → Virtual Solar",
-        "node_type": "default",
-        "node_style": {
+        "module": "PvoutToVirtualSolarPiece",
+        "label": "PVOUT → Virtual Solar",
+        "nodeType": "default",
+        "nodeStyle": {
           "backgroundColor": "#ebebeb"
         },
         "useIcon": true,
-        "icon_class_name": "fa-solid:sun",
+        "iconClassName": "fa-solid:sun",
         "iconStyle": {
           "cursor": "pointer"
         }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/PvoutToVirtualSolarPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "115_2f0749c9-199f-5b80-b9f3-4bbc841a5ea7": {
-      "id": 100,
+      "id": 1691,
       "name": "BatteryStrategyOptimizerPiece",
       "description": "Create battery dispatch strategy recommendation",
       "dependency": {
@@ -2815,28 +2769,27 @@
         "title": "SecretsModel",
         "type": "object"
       },
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 128
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [],
       "style": {
-        "node_label": "Battery Strategy",
-        "icon_class_name": "fa-solid:sliders"
+        "module": "BatteryStrategyOptimizerPiece",
+        "label": "Battery Strategy",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:sliders",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/BatteryStrategyOptimizerPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "116_9d7a32d8-2c11-5fe4-a7a1-cfbe6e48afd3": {
-      "id": 100,
+      "id": 1679,
       "name": "SizingOptimizationPiece",
       "description": "Auto/manual sizing for PV and battery",
       "dependency": {
@@ -2970,28 +2923,27 @@
         "title": "SecretsModel",
         "type": "object"
       },
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 128
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [],
       "style": {
-        "node_label": "SizingOptimizationPiece",
-        "icon_class_name": "fa-solid:chart-line"
+        "module": "SizingOptimizationPiece",
+        "label": "SizingOptimizationPiece",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:chart-line",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/SizingOptimizationPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "117_0249ffd7-e7fb-5b6f-b6d5-1ac45a6b8d58": {
-      "id": 100,
+      "id": 1693,
       "name": "CatalogRankerPiece",
       "description": "Rank online hardware catalog for selected scenario sizing",
       "dependency": {
@@ -3088,28 +3040,27 @@
         "title": "SecretsModel",
         "type": "object"
       },
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 128
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [],
       "style": {
-        "node_label": "CatalogRankerPiece",
-        "icon_class_name": "fa-solid:list-check"
+        "module": "CatalogRankerPiece",
+        "label": "CatalogRankerPiece",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:list-check",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/CatalogRankerPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "118_9738a3b5-7514-577a-b159-0a5aabcc2c52": {
-      "id": 100,
+      "id": 1681,
       "name": "BatterySimPiece",
       "description": "Generate battery SOC timeseries from load and PV profile",
       "dependency": {
@@ -3228,28 +3179,27 @@
         "title": "SecretsModel",
         "type": "object"
       },
-      "container_resources": {
-        "requests": {
-          "cpu": 250,
-          "memory": 512
-        },
-        "limits": {
-          "cpu": 1000,
-          "memory": 2048
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [],
       "style": {
-        "node_label": "Battery Simulation",
-        "icon_class_name": "fa-solid:battery-half"
+        "module": "BatterySimPiece",
+        "label": "Battery Simulation",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:battery-half",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/BatterySimPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "119_7d3da2c0-4c34-5c31-9c9a-2dfeabc62a3b": {
-      "id": 100,
+      "id": 1690,
       "name": "SimulatePiece",
       "description": "Run MRK simulation baseline/PV/battery",
       "dependency": {
@@ -3388,30 +3338,29 @@
         "title": "SecretsModel",
         "type": "object"
       },
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 1024
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [
         "Energy"
       ],
       "style": {
-        "node_label": "Simulate MRK Scenario",
-        "icon_class_name": "fa-solid:calculator"
+        "module": "SimulatePiece",
+        "label": "Simulate MRK Scenario",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:calculator",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/SimulatePiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "120_3e5d002e-5f21-5ac7-9284-21a95f4206c6": {
-      "id": 100,
+      "id": 1698,
       "name": "SizingHeatmapPiece",
       "description": "Sweep PV and battery sizes over the AI production forecast and report savings, NPV and payback for every combination as a heatmap grid.",
       "dependency": {
@@ -3582,40 +3531,31 @@
         "title": "SecretsModel",
         "type": "object"
       },
-      "container_resources": {
-        "requests": {
-          "cpu": 500,
-          "memory": 512
-        },
-        "limits": {
-          "cpu": 2000,
-          "memory": 2048
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [
         "Sizing",
         "Heatmap",
         "Economics"
       ],
       "style": {
-        "node_label": "Sizing Heatmap",
-        "node_type": "default",
-        "node_style": {
+        "module": "SizingHeatmapPiece",
+        "label": "Sizing Heatmap",
+        "nodeType": "default",
+        "nodeStyle": {
           "backgroundColor": "#ebebeb"
         },
         "useIcon": true,
-        "icon_class_name": "fa-solid:table-cells",
+        "iconClassName": "fa-solid:table-cells",
         "iconStyle": {
           "cursor": "pointer"
         }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/SizingHeatmapPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "121_5a2725c8-448c-5709-a4d1-5634d37ea37d": {
-      "id": 100,
+      "id": 1687,
       "name": "KPIPiece",
       "description": "Compute KPI summary from MRK report",
       "dependency": {
@@ -3706,28 +3646,27 @@
         "title": "SecretsModel",
         "type": "object"
       },
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 128
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [],
       "style": {
-        "node_label": "Compute KPIs",
-        "icon_class_name": "fa-solid:chart-column"
+        "module": "KPIPiece",
+        "label": "Compute KPIs",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:chart-column",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/KPIPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "122_d58df8e1-99ac-5049-bf2e-13e17f9eaa55": {
-      "id": 100,
+      "id": 1697,
       "name": "InvestmentEvalPiece",
       "description": "Compute investment evaluation from simulated KPIs",
       "dependency": {
@@ -3829,28 +3768,27 @@
         "title": "SecretsModel",
         "type": "object"
       },
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 128
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [],
       "style": {
-        "node_label": "Investment Evaluation",
-        "icon_class_name": "fa-solid:coins"
+        "module": "InvestmentEvalPiece",
+        "label": "Investment Evaluation",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:coins",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/InvestmentEvalPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     },
     "123_495db346-8ff3-53fa-933a-57c9eb0bb5e0": {
-      "id": 100,
+      "id": 1684,
       "name": "DashboardPiece",
       "description": "Aggregate MRK report and KPI CSV into dashboard JSON",
       "dependency": {
@@ -4032,25 +3970,24 @@
         "title": "SecretsModel",
         "type": "object"
       },
-      "container_resources": {
-        "requests": {
-          "cpu": 100,
-          "memory": 128
-        },
-        "limits": {
-          "cpu": 500,
-          "memory": 512
-        },
-        "use_gpu": false
-      },
+      "container_resources": {},
       "tags": [],
       "style": {
-        "node_label": "Dashboard Data",
-        "icon_class_name": "fa-solid:chart-line"
+        "module": "DashboardPiece",
+        "label": "Dashboard Data",
+        "nodeType": "default",
+        "nodeStyle": {
+          "backgroundColor": "#ebebeb"
+        },
+        "useIcon": true,
+        "iconClassName": "fa-solid:chart-line",
+        "iconStyle": {
+          "cursor": "pointer"
+        }
       },
       "source_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer/tree/main/pieces/DashboardPiece",
       "repository_url": "https://github.com/filipchrvala/industry_sg_vre_cost_optimizer",
-      "repository_id": 14
+      "repository_id": 112
     }
   },
   "workflowPiecesData": {
@@ -4084,6 +4021,13 @@
           "upstreamArgument": "",
           "upstreamValue": "",
           "value": "onedata:///SCDI/UC3.2_COST_OPTIMIZER/inputs/scenario.yaml"
+        },
+        "run_id": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": ""
         }
       }
     },
@@ -4102,14 +4046,14 @@
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "run_id",
           "upstreamValue": "UserInputPiece (c0855de1) - Run Id",
-          "value": ""
+          "value": null
         },
         "scenario_yaml": {
           "fromUpstream": true,
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "scenario_yaml",
           "upstreamValue": "UserInputPiece (c0855de1) - Scenario Yaml",
-          "value": ""
+          "value": null
         }
       }
     },
@@ -4128,21 +4072,21 @@
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "run_id",
           "upstreamValue": "UserInputPiece (c0855de1) - Run Id",
-          "value": ""
+          "value": null
         },
         "load_csv": {
           "fromUpstream": true,
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "load_csv",
           "upstreamValue": "UserInputPiece (c0855de1) - Load Csv",
-          "value": ""
+          "value": null
         },
         "scenario_yaml": {
           "fromUpstream": true,
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "scenario_yaml",
           "upstreamValue": "UserInputPiece (c0855de1) - Scenario Yaml",
-          "value": ""
+          "value": null
         }
       }
     },
@@ -4161,14 +4105,14 @@
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "scenario_yaml",
           "upstreamValue": "UserInputPiece (c0855de1) - Scenario Yaml",
-          "value": ""
+          "value": null
         },
         "load_csv": {
           "fromUpstream": true,
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "load_csv",
           "upstreamValue": "UserInputPiece (c0855de1) - Load Csv",
-          "value": ""
+          "value": null
         },
         "time_resolution": {
           "fromUpstream": false,
@@ -4190,6 +4134,48 @@
           "upstreamArgument": "",
           "upstreamValue": "",
           "value": "csv"
+        },
+        "latitude": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": 48.15
+        },
+        "longitude": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": 17.11
+        },
+        "start_date": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": "2026-01-01"
+        },
+        "end_date": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": "2026-01-07"
+        },
+        "pvout_peak_kw": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": 5.2
+        },
+        "panel_tilt": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": 30.0
         }
       }
     },
@@ -4208,28 +4194,42 @@
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "run_id",
           "upstreamValue": "UserInputPiece (c0855de1) - Run Id",
-          "value": ""
+          "value": null
         },
         "weather_csv_path": {
           "fromUpstream": true,
           "upstreamId": "OpenMeteoP_d09d4e0cfb3d5ad591863d5ed80bf128",
           "upstreamArgument": "file_path",
           "upstreamValue": "OpenMeteoPVDataPiece (d09d4e0c) - File Path",
-          "value": ""
+          "value": null
         },
         "training_base_csv": {
           "fromUpstream": true,
           "upstreamId": "PvoutModel_965a628d34275d6585c0ec7ef12fd0c4",
           "upstreamArgument": "data_path",
           "upstreamValue": "PvoutModelFeatureSelectPiece (965a628d) - Data Path",
-          "value": ""
+          "value": null
         },
         "scenario_yaml": {
           "fromUpstream": true,
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "scenario_yaml",
           "upstreamValue": "UserInputPiece (c0855de1) - Scenario Yaml",
-          "value": ""
+          "value": null
+        },
+        "max_station_distance_km": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": 120.0
+        },
+        "enabled": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": true
         }
       }
     },
@@ -4255,7 +4255,7 @@
           "upstreamId": "OpenMeteoP_d09d4e0cfb3d5ad591863d5ed80bf128",
           "upstreamArgument": "file_path",
           "upstreamValue": "OpenMeteoPVDataPiece (d09d4e0c) - File Path",
-          "value": ""
+          "value": null
         },
         "keep_datetime": {
           "fromUpstream": false,
@@ -4269,7 +4269,28 @@
           "upstreamId": "OpenMeteoP_d09d4e0cfb3d5ad591863d5ed80bf128",
           "upstreamArgument": "target_column",
           "upstreamValue": "OpenMeteoPVDataPiece (d09d4e0c) - Target Column",
-          "value": ""
+          "value": null
+        },
+        "data_path_okte": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": null
+        },
+        "save_data_path": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": null
+        },
+        "test_size": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": null
         }
       }
     },
@@ -4296,8 +4317,20 @@
           "upstreamArgument": "",
           "upstreamValue": "",
           "value": [
-            "xgb_regressor_model",
-            "linear_regression_model"
+            {
+              "fromUpstream": false,
+              "upstreamId": "",
+              "upstreamArgument": "",
+              "upstreamValue": "",
+              "value": "xgb_regressor_model"
+            },
+            {
+              "fromUpstream": false,
+              "upstreamId": "",
+              "upstreamArgument": "",
+              "upstreamValue": "",
+              "value": "linear_regression_model"
+            }
           ]
         },
         "feature_columns": {
@@ -4305,21 +4338,28 @@
           "upstreamId": "DataPrepro_2f5b3d60881d5bfab98d57827306daeb",
           "upstreamArgument": "feature_columns",
           "upstreamValue": "DataPreprocessingPiece (2f5b3d60) - Feature Columns",
-          "value": ""
+          "value": []
         },
         "target_column": {
           "fromUpstream": true,
           "upstreamId": "DataPrepro_2f5b3d60881d5bfab98d57827306daeb",
           "upstreamArgument": "target_column",
           "upstreamValue": "DataPreprocessingPiece (2f5b3d60) - Target Column",
-          "value": ""
+          "value": null
         },
         "data_path": {
           "fromUpstream": true,
           "upstreamId": "DataPrepro_2f5b3d60881d5bfab98d57827306daeb",
           "upstreamArgument": "data_path",
           "upstreamValue": "DataPreprocessingPiece (2f5b3d60) - Data Path",
-          "value": ""
+          "value": null
+        },
+        "horizon": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": 1
         }
       }
     },
@@ -4338,42 +4378,49 @@
           "upstreamId": "ModelDecid_7193e3c8485153328dffe67b12dc83ab",
           "upstreamArgument": "normalization_type",
           "upstreamValue": "ModelDeciderPiece (7193e3c8) - Normalization Type",
-          "value": ""
+          "value": null
         },
         "features": {
           "fromUpstream": false,
           "upstreamId": "",
           "upstreamArgument": "",
           "upstreamValue": "",
-          "value": ""
+          "value": []
         },
         "data_path": {
           "fromUpstream": true,
           "upstreamId": "ModelDecid_7193e3c8485153328dffe67b12dc83ab",
           "upstreamArgument": "data_path",
           "upstreamValue": "ModelDeciderPiece (7193e3c8) - Data Path",
-          "value": ""
+          "value": null
         },
         "feature_columns": {
           "fromUpstream": true,
           "upstreamId": "ModelDecid_7193e3c8485153328dffe67b12dc83ab",
           "upstreamArgument": "feature_columns",
           "upstreamValue": "ModelDeciderPiece (7193e3c8) - Feature Columns",
-          "value": ""
+          "value": []
         },
         "target_column": {
           "fromUpstream": true,
           "upstreamId": "ModelDecid_7193e3c8485153328dffe67b12dc83ab",
           "upstreamArgument": "target_column",
           "upstreamValue": "ModelDeciderPiece (7193e3c8) - Target Column",
-          "value": ""
+          "value": null
         },
         "model_type": {
           "fromUpstream": true,
           "upstreamId": "ModelDecid_7193e3c8485153328dffe67b12dc83ab",
           "upstreamArgument": "model_type",
           "upstreamValue": "ModelDeciderPiece (7193e3c8) - Model Type",
-          "value": ""
+          "value": null
+        },
+        "dataframe": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": null
         }
       }
     },
@@ -4392,21 +4439,21 @@
           "upstreamId": "DataNormal_dcede7997f3e57bbb4a40d5567602e0a",
           "upstreamArgument": "data_path",
           "upstreamValue": "DataNormalizationPiece (dcede799) - Data Path",
-          "value": ""
+          "value": null
         },
         "feature_columns": {
           "fromUpstream": true,
           "upstreamId": "DataNormal_dcede7997f3e57bbb4a40d5567602e0a",
           "upstreamArgument": "feature_columns",
           "upstreamValue": "DataNormalizationPiece (dcede799) - Feature Columns",
-          "value": ""
+          "value": []
         },
         "target_column": {
           "fromUpstream": true,
           "upstreamId": "DataNormal_dcede7997f3e57bbb4a40d5567602e0a",
           "upstreamArgument": "target_column",
           "upstreamValue": "DataNormalizationPiece (dcede799) - Target Column",
-          "value": ""
+          "value": null
         }
       }
     },
@@ -4432,21 +4479,35 @@
           "upstreamId": "PvoutModel_965a628d34275d6585c0ec7ef12fd0c4",
           "upstreamArgument": "data_path",
           "upstreamValue": "PvoutModelFeatureSelectPiece (965a628d) - Data Path",
-          "value": ""
+          "value": null
         },
         "feature_columns": {
           "fromUpstream": true,
           "upstreamId": "PvoutModel_965a628d34275d6585c0ec7ef12fd0c4",
           "upstreamArgument": "feature_columns",
           "upstreamValue": "PvoutModelFeatureSelectPiece (965a628d) - Feature Columns",
-          "value": ""
+          "value": []
         },
         "target_column": {
           "fromUpstream": true,
           "upstreamId": "PvoutModel_965a628d34275d6585c0ec7ef12fd0c4",
           "upstreamArgument": "target_column",
           "upstreamValue": "PvoutModelFeatureSelectPiece (965a628d) - Target Column",
-          "value": ""
+          "value": null
+        },
+        "csv_path": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": null
+        },
+        "checkpoint_dir": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": null
         }
       }
     },
@@ -4472,28 +4533,42 @@
           "upstreamId": "ShmuCalibr_147b32753cfe55e6be21deaf354d1392",
           "upstreamArgument": "calibrated_training_csv",
           "upstreamValue": "ShmuCalibrationPiece (147b3275) - Calibrated Training Csv",
-          "value": ""
+          "value": null
         },
         "baseline_model_path": {
           "fromUpstream": true,
           "upstreamId": "PVOUTPredi_4fb2c83843895d3ab6facb748937a818",
           "upstreamArgument": "model_path",
           "upstreamValue": "PVOUTPredictionModelTrainPiece (4fb2c838) - Model Path",
-          "value": ""
+          "value": null
         },
         "feature_columns": {
           "fromUpstream": true,
           "upstreamId": "PVOUTPredi_4fb2c83843895d3ab6facb748937a818",
           "upstreamArgument": "feature_columns",
           "upstreamValue": "PVOUTPredictionModelTrainPiece (4fb2c838) - Feature Columns",
-          "value": ""
+          "value": []
         },
         "target_column": {
           "fromUpstream": true,
           "upstreamId": "PVOUTPredi_4fb2c83843895d3ab6facb748937a818",
           "upstreamArgument": "target_column",
           "upstreamValue": "PVOUTPredictionModelTrainPiece (4fb2c838) - Target Column",
-          "value": ""
+          "value": null
+        },
+        "csv_path": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": null
+        },
+        "checkpoint_dir": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": null
         }
       }
     },
@@ -4512,42 +4587,49 @@
           "upstreamId": "PVOUTPredi_4fb2c83843895d3ab6facb748937a818",
           "upstreamArgument": "model_path",
           "upstreamValue": "PVOUTPredictionModelTrainPiece (4fb2c838) - Model Path",
-          "value": ""
+          "value": null
         },
         "correction_model_path": {
           "fromUpstream": true,
           "upstreamId": "PVOUTError_90d0829b102c5a3b828b73c90ee17ef7",
           "upstreamArgument": "model_path",
           "upstreamValue": "PVOUTErrorCorrectionModelTrainPiece (90d0829b) - Model Path",
-          "value": ""
+          "value": null
         },
         "data_path": {
           "fromUpstream": true,
           "upstreamId": "PvoutModel_965a628d34275d6585c0ec7ef12fd0c4",
           "upstreamArgument": "data_path",
           "upstreamValue": "PvoutModelFeatureSelectPiece (965a628d) - Data Path",
-          "value": ""
+          "value": null
         },
         "feature_columns": {
           "fromUpstream": true,
           "upstreamId": "PvoutModel_965a628d34275d6585c0ec7ef12fd0c4",
           "upstreamArgument": "feature_columns",
           "upstreamValue": "PvoutModelFeatureSelectPiece (965a628d) - Feature Columns",
-          "value": ""
+          "value": []
         },
         "datetime_column": {
           "fromUpstream": true,
           "upstreamId": "PvoutModel_965a628d34275d6585c0ec7ef12fd0c4",
           "upstreamArgument": "datetime_column",
           "upstreamValue": "PvoutModelFeatureSelectPiece (965a628d) - Datetime Column",
-          "value": ""
+          "value": null
         },
         "target_column": {
           "fromUpstream": true,
           "upstreamId": "PvoutModel_965a628d34275d6585c0ec7ef12fd0c4",
           "upstreamArgument": "target_column",
           "upstreamValue": "PvoutModelFeatureSelectPiece (965a628d) - Target Column",
-          "value": ""
+          "value": null
+        },
+        "pred_column": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": "PVOUT_PRED"
         }
       }
     },
@@ -4566,14 +4648,35 @@
           "upstreamId": "PvoutStage_b9d15107b16e52a8860235b885ee4898",
           "upstreamArgument": "pvout_model",
           "upstreamValue": "PvoutStagedInferenceSpecPiece (b9d15107) - Pvout Model",
-          "value": ""
+          "value": []
         },
         "datetime_column": {
           "fromUpstream": true,
           "upstreamId": "PvoutStage_b9d15107b16e52a8860235b885ee4898",
           "upstreamArgument": "datetime_column",
           "upstreamValue": "PvoutStagedInferenceSpecPiece (b9d15107) - Datetime Column",
-          "value": ""
+          "value": null
+        },
+        "price_model": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": []
+        },
+        "horizon_column": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": null
+        },
+        "max_horizon": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": null
         }
       }
     },
@@ -4592,28 +4695,28 @@
           "upstreamId": "InferenceP_d8595140c9e3543c986e55fd33a1128f",
           "upstreamArgument": "forecast_csv_path",
           "upstreamValue": "InferencePiece (d8595140) - Forecast Csv Path",
-          "value": ""
+          "value": null
         },
         "load_csv": {
           "fromUpstream": true,
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "load_csv",
           "upstreamValue": "UserInputPiece (c0855de1) - Load Csv",
-          "value": ""
+          "value": null
         },
         "irradiance_scale_factor": {
           "fromUpstream": true,
           "upstreamId": "ShmuCalibr_147b32753cfe55e6be21deaf354d1392",
           "upstreamArgument": "irradiance_scale_factor",
           "upstreamValue": "ShmuCalibrationPiece (147b3275) - Irradiance Scale Factor",
-          "value": ""
+          "value": null
         },
         "scenario_yaml": {
           "fromUpstream": true,
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "scenario_yaml",
           "upstreamValue": "UserInputPiece (c0855de1) - Scenario Yaml",
-          "value": ""
+          "value": null
         }
       }
     },
@@ -4632,21 +4735,21 @@
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "run_id",
           "upstreamValue": "UserInputPiece (c0855de1) - Run Id",
-          "value": ""
+          "value": null
         },
         "load_csv": {
           "fromUpstream": true,
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "load_csv",
           "upstreamValue": "UserInputPiece (c0855de1) - Load Csv",
-          "value": ""
+          "value": null
         },
         "scenario_yaml": {
           "fromUpstream": true,
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "scenario_yaml",
           "upstreamValue": "UserInputPiece (c0855de1) - Scenario Yaml",
-          "value": ""
+          "value": null
         }
       }
     },
@@ -4665,42 +4768,42 @@
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "run_id",
           "upstreamValue": "UserInputPiece (c0855de1) - Run Id",
-          "value": ""
+          "value": null
         },
         "load_csv": {
           "fromUpstream": true,
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "load_csv",
           "upstreamValue": "UserInputPiece (c0855de1) - Load Csv",
-          "value": ""
+          "value": null
         },
         "scenario_yaml": {
           "fromUpstream": true,
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "scenario_yaml",
           "upstreamValue": "UserInputPiece (c0855de1) - Scenario Yaml",
-          "value": ""
+          "value": null
         },
         "virtual_solar_csv": {
           "fromUpstream": true,
           "upstreamId": "PvoutToVir_1965d058d1f65f4996fdf20d6363ef7f",
           "upstreamArgument": "virtual_solar_csv",
           "upstreamValue": "PvoutToVirtualSolarPiece (1965d058) - Virtual Solar Csv",
-          "value": ""
+          "value": null
         },
         "technical_limits_json": {
           "fromUpstream": true,
           "upstreamId": "TechnicalL_e28f91b5ea2e58aaa6ca7e0f56400106",
           "upstreamArgument": "technical_limits_json",
           "upstreamValue": "TechnicalLimitsPiece (e28f91b5) - Technical Limits Json",
-          "value": ""
+          "value": null
         },
         "battery_strategy_recommendation_json": {
           "fromUpstream": true,
           "upstreamId": "BatteryStr_2f0749c9199f5b80b9f34bbc841a5ea7",
           "upstreamArgument": "battery_strategy_recommendation_json",
           "upstreamValue": "BatteryStrategyOptimizerPiece (2f0749c9) - Battery Strategy Recommendation Json",
-          "value": ""
+          "value": null
         }
       }
     },
@@ -4719,21 +4822,21 @@
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "run_id",
           "upstreamValue": "UserInputPiece (c0855de1) - Run Id",
-          "value": ""
+          "value": null
         },
         "scenario_yaml": {
           "fromUpstream": true,
           "upstreamId": "SizingOpti_9d7a32d82c115fe4a7a1cfbe6e48afd3",
           "upstreamArgument": "sized_scenario_yaml",
           "upstreamValue": "SizingOptimizationPiece (9d7a32d8) - Sized Scenario Yaml",
-          "value": ""
+          "value": null
         },
         "pv_catalog_json": {
           "fromUpstream": true,
           "upstreamId": "CatalogSyn_2c7aab615fbf50d488a61b49db944113",
           "upstreamArgument": "pv_catalog_json",
           "upstreamValue": "CatalogSyncPiece (2c7aab61) - Pv Catalog Json",
-          "value": ""
+          "value": null
         }
       }
     },
@@ -4752,35 +4855,35 @@
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "run_id",
           "upstreamValue": "UserInputPiece (c0855de1) - Run Id",
-          "value": ""
+          "value": null
         },
         "load_csv": {
           "fromUpstream": true,
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "load_csv",
           "upstreamValue": "UserInputPiece (c0855de1) - Load Csv",
-          "value": ""
+          "value": null
         },
         "scenario_yaml": {
           "fromUpstream": true,
           "upstreamId": "SizingOpti_9d7a32d82c115fe4a7a1cfbe6e48afd3",
           "upstreamArgument": "sized_scenario_yaml",
           "upstreamValue": "SizingOptimizationPiece (9d7a32d8) - Sized Scenario Yaml",
-          "value": ""
+          "value": null
         },
         "virtual_solar_csv": {
           "fromUpstream": true,
           "upstreamId": "PvoutToVir_1965d058d1f65f4996fdf20d6363ef7f",
           "upstreamArgument": "virtual_solar_csv",
           "upstreamValue": "PvoutToVirtualSolarPiece (1965d058) - Virtual Solar Csv",
-          "value": ""
+          "value": null
         },
         "battery_strategy_recommendation_json": {
           "fromUpstream": true,
           "upstreamId": "BatteryStr_2f0749c9199f5b80b9f34bbc841a5ea7",
           "upstreamArgument": "battery_strategy_recommendation_json",
           "upstreamValue": "BatteryStrategyOptimizerPiece (2f0749c9) - Battery Strategy Recommendation Json",
-          "value": ""
+          "value": null
         }
       }
     },
@@ -4799,70 +4902,70 @@
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "run_id",
           "upstreamValue": "UserInputPiece (c0855de1) - Run Id",
-          "value": ""
+          "value": null
         },
         "load_csv": {
           "fromUpstream": true,
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "load_csv",
           "upstreamValue": "UserInputPiece (c0855de1) - Load Csv",
-          "value": ""
+          "value": null
         },
         "scenario_yaml": {
           "fromUpstream": true,
           "upstreamId": "SizingOpti_9d7a32d82c115fe4a7a1cfbe6e48afd3",
           "upstreamArgument": "sized_scenario_yaml",
           "upstreamValue": "SizingOptimizationPiece (9d7a32d8) - Sized Scenario Yaml",
-          "value": ""
+          "value": null
         },
         "virtual_solar_csv": {
           "fromUpstream": true,
           "upstreamId": "PvoutToVir_1965d058d1f65f4996fdf20d6363ef7f",
           "upstreamArgument": "virtual_solar_csv",
           "upstreamValue": "PvoutToVirtualSolarPiece (1965d058) - Virtual Solar Csv",
-          "value": ""
+          "value": null
         },
         "battery_dispatch_csv": {
           "fromUpstream": true,
           "upstreamId": "BatterySim_9738a3b57514577ab1590a5aabcc2c52",
           "upstreamArgument": "battery_dispatch_csv",
           "upstreamValue": "BatterySimPiece (9738a3b5) - Battery Dispatch Csv",
-          "value": ""
+          "value": null
         },
         "battery_summary_csv": {
           "fromUpstream": true,
           "upstreamId": "BatterySim_9738a3b57514577ab1590a5aabcc2c52",
           "upstreamArgument": "battery_summary_csv",
           "upstreamValue": "BatterySimPiece (9738a3b5) - Battery Summary Csv",
-          "value": ""
+          "value": null
         },
         "ranked_catalog_json": {
           "fromUpstream": true,
           "upstreamId": "CatalogRan_0249ffd7e7fb5b6fb6d51ac45a6b8d58",
           "upstreamArgument": "catalog_ranked_recommendation_json",
           "upstreamValue": "CatalogRankerPiece (0249ffd7) - Catalog Ranked Recommendation Json",
-          "value": ""
+          "value": null
         },
         "inverter_catalog_json": {
           "fromUpstream": true,
           "upstreamId": "CatalogSyn_2c7aab615fbf50d488a61b49db944113",
           "upstreamArgument": "inverter_catalog_json",
           "upstreamValue": "CatalogSyncPiece (2c7aab61) - Inverter Catalog Json",
-          "value": ""
+          "value": null
         },
         "battery_catalog_json": {
           "fromUpstream": true,
           "upstreamId": "CatalogSyn_2c7aab615fbf50d488a61b49db944113",
           "upstreamArgument": "battery_catalog_json",
           "upstreamValue": "CatalogSyncPiece (2c7aab61) - Battery Catalog Json",
-          "value": ""
+          "value": null
         },
         "catalog_manifest_json": {
           "fromUpstream": true,
           "upstreamId": "CatalogSyn_2c7aab615fbf50d488a61b49db944113",
           "upstreamArgument": "catalog_manifest_json",
           "upstreamValue": "CatalogSyncPiece (2c7aab61) - Catalog Manifest Json",
-          "value": ""
+          "value": null
         }
       }
     },
@@ -4881,42 +4984,56 @@
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "run_id",
           "upstreamValue": "UserInputPiece (c0855de1) - Run Id",
-          "value": ""
+          "value": null
         },
         "load_csv": {
           "fromUpstream": true,
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "load_csv",
           "upstreamValue": "UserInputPiece (c0855de1) - Load Csv",
-          "value": ""
+          "value": null
         },
         "scenario_yaml": {
           "fromUpstream": true,
           "upstreamId": "SizingOpti_9d7a32d82c115fe4a7a1cfbe6e48afd3",
           "upstreamArgument": "sized_scenario_yaml",
           "upstreamValue": "SizingOptimizationPiece (9d7a32d8) - Sized Scenario Yaml",
-          "value": ""
+          "value": null
         },
         "virtual_solar_csv": {
           "fromUpstream": true,
           "upstreamId": "PvoutToVir_1965d058d1f65f4996fdf20d6363ef7f",
           "upstreamArgument": "virtual_solar_csv",
           "upstreamValue": "PvoutToVirtualSolarPiece (1965d058) - Virtual Solar Csv",
-          "value": ""
+          "value": null
         },
         "technical_limits_json": {
           "fromUpstream": true,
           "upstreamId": "TechnicalL_e28f91b5ea2e58aaa6ca7e0f56400106",
           "upstreamArgument": "technical_limits_json",
           "upstreamValue": "TechnicalLimitsPiece (e28f91b5) - Technical Limits Json",
-          "value": ""
+          "value": null
         },
         "battery_strategy_recommendation_json": {
           "fromUpstream": true,
           "upstreamId": "BatteryStr_2f0749c9199f5b80b9f34bbc841a5ea7",
           "upstreamArgument": "battery_strategy_recommendation_json",
           "upstreamValue": "BatteryStrategyOptimizerPiece (2f0749c9) - Battery Strategy Recommendation Json",
-          "value": ""
+          "value": null
+        },
+        "pv_steps": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": 12
+        },
+        "battery_steps": {
+          "fromUpstream": false,
+          "upstreamId": "",
+          "upstreamArgument": "",
+          "upstreamValue": "",
+          "value": 10
         }
       }
     },
@@ -4935,14 +5052,14 @@
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "run_id",
           "upstreamValue": "UserInputPiece (c0855de1) - Run Id",
-          "value": ""
+          "value": null
         },
         "report_json": {
           "fromUpstream": true,
           "upstreamId": "SimulatePi_7d3da2c04c345c319c9a2dfeabc62a3b",
           "upstreamArgument": "report_json",
           "upstreamValue": "SimulatePiece (7d3da2c0) - Report Json",
-          "value": ""
+          "value": null
         }
       }
     },
@@ -4961,21 +5078,21 @@
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "run_id",
           "upstreamValue": "UserInputPiece (c0855de1) - Run Id",
-          "value": ""
+          "value": null
         },
         "report_json": {
           "fromUpstream": true,
           "upstreamId": "SimulatePi_7d3da2c04c345c319c9a2dfeabc62a3b",
           "upstreamArgument": "report_json",
           "upstreamValue": "SimulatePiece (7d3da2c0) - Report Json",
-          "value": ""
+          "value": null
         },
         "kpi_results_csv": {
           "fromUpstream": true,
           "upstreamId": "KPIPiece_5a2725c8448c5709a4d15634d37ea37d",
           "upstreamArgument": "kpi_results_csv",
           "upstreamValue": "KPIPiece (5a2725c8) - Kpi Results Csv",
-          "value": ""
+          "value": null
         }
       }
     },
@@ -4994,70 +5111,70 @@
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "run_id",
           "upstreamValue": "UserInputPiece (c0855de1) - Run Id",
-          "value": ""
+          "value": null
         },
         "report_json": {
           "fromUpstream": true,
           "upstreamId": "SimulatePi_7d3da2c04c345c319c9a2dfeabc62a3b",
           "upstreamArgument": "report_json",
           "upstreamValue": "SimulatePiece (7d3da2c0) - Report Json",
-          "value": ""
+          "value": null
         },
         "kpi_results_csv": {
           "fromUpstream": true,
           "upstreamId": "KPIPiece_5a2725c8448c5709a4d15634d37ea37d",
           "upstreamArgument": "kpi_results_csv",
           "upstreamValue": "KPIPiece (5a2725c8) - Kpi Results Csv",
-          "value": ""
+          "value": null
         },
         "investment_evaluation_csv": {
           "fromUpstream": true,
           "upstreamId": "Investment_d58df8e199ac5049bf2e13e17f9eaa55",
           "upstreamArgument": "investment_evaluation_csv",
           "upstreamValue": "InvestmentEvalPiece (d58df8e1) - Investment Evaluation Csv",
-          "value": ""
+          "value": null
         },
         "heatmap_json": {
           "fromUpstream": true,
           "upstreamId": "SizingHeat_3e5d002e5f215ac7928421a95f4206c6",
           "upstreamArgument": "heatmap_json",
           "upstreamValue": "SizingHeatmapPiece (3e5d002e) - Heatmap Json",
-          "value": ""
+          "value": null
         },
         "catalog_ranked_recommendation_json": {
           "fromUpstream": true,
           "upstreamId": "CatalogRan_0249ffd7e7fb5b6fb6d51ac45a6b8d58",
           "upstreamArgument": "catalog_ranked_recommendation_json",
           "upstreamValue": "CatalogRankerPiece (0249ffd7) - Catalog Ranked Recommendation Json",
-          "value": ""
+          "value": null
         },
         "calibration_json": {
           "fromUpstream": true,
           "upstreamId": "ShmuCalibr_147b32753cfe55e6be21deaf354d1392",
           "upstreamArgument": "calibration_json",
           "upstreamValue": "ShmuCalibrationPiece (147b3275) - Calibration Json",
-          "value": ""
+          "value": null
         },
         "battery_dispatch_csv": {
           "fromUpstream": true,
           "upstreamId": "BatterySim_9738a3b57514577ab1590a5aabcc2c52",
           "upstreamArgument": "battery_dispatch_csv",
           "upstreamValue": "BatterySimPiece (9738a3b5) - Battery Dispatch Csv",
-          "value": ""
+          "value": null
         },
         "load_csv": {
           "fromUpstream": true,
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "load_csv",
           "upstreamValue": "UserInputPiece (c0855de1) - Load Csv",
-          "value": ""
+          "value": null
         },
         "user_input_summary_json": {
           "fromUpstream": true,
           "upstreamId": "UserInputP_c0855de1a3735273a2a08cd79260fdc3",
           "upstreamArgument": "user_input_summary_json",
           "upstreamValue": "UserInputPiece (c0855de1) - User Input Summary Json",
-          "value": ""
+          "value": null
         }
       }
     }
