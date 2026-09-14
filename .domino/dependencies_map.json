@@ -34,6 +34,6 @@
             "onedata_token",
             "onedata_onezone_host"
         ],
-        "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.46-group0"
+        "source_image": "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:0.1.47-group0"
     }
 }
