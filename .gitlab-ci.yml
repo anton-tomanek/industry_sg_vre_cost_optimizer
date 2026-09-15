@@ -1,0 +1,101 @@
+stages:
+  - sast
+  - validate-and-organize
+  - run-tests-dev
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
+
+sast:
+  stage: sast
+
+semgrep-sast:
+  stage: sast
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - when: never
+
+.base-setup: &base-setup
+  image: quay.io/podman/stable:v5.5.2
+  variables:
+    STORAGE_DRIVER: overlay
+    DOCKER_HOST: unix:///run/podman/podman.sock
+    DOMINO_GIT_PROVIDER: gitlab
+    GITLAB_TOKEN: $CI_RELEASE_TOKEN
+  tags:
+    - k8s_shared_testbed
+  before_script:
+    - dnf install -y -q python3.11 python3.11-devel git gcc gcc-c++
+    - python3.11 -m venv /opt/venv
+    - . /opt/venv/bin/activate
+    - python -m pip install --no-cache-dir -U pip
+    - cp /etc/gitlab-runner/certs/ca.crt /etc/pki/ca-trust/source/anchors/harbor-ca.crt
+    - update-ca-trust
+    - printf 'unqualified-search-registries = ["docker.io"]\nshort-name-mode = "permissive"\n' > /etc/containers/registries.conf.d/01-shortnames.conf
+    - mkdir -p /run/podman
+    - podman system service --time=0 unix:///run/podman/podman.sock > /tmp/podman-service.log 2>&1 &
+    - |
+      for i in $(seq 1 30); do [ -S /run/podman/podman.sock ] && break; sleep 1; done
+      if [ ! -S /run/podman/podman.sock ]; then
+        echo "ERROR: podman API socket /run/podman/podman.sock never appeared." >&2
+        echo "--- /tmp/podman-service.log ---" >&2; cat /tmp/podman-service.log >&2 || true
+        exit 1
+      fi
+    - DOCKER_HOST=unix:///run/podman/podman.sock podman version
+    - echo "$CONTAINER_REGISTRY_PASSWORD" | podman login "$CONTAINER_REGISTRY" -u "$CONTAINER_REGISTRY_USERNAME" --password-stdin
+    - pip install --no-cache-dir domino-py-spice[cli]
+    - git config --global user.email "gitlab-ci-bot@users.noreply.gitlab.com"
+    - git config --global user.name "gitlab-ci-bot"
+    - |
+      : "${CI_PUSH_TOKEN:?CI_PUSH_TOKEN is empty. Configure a Project Access Token with write_repository (and api) scope at Settings → CI/CD → Variables. See README.md → Required CI/CD variables.}"
+      : "${CI_RELEASE_TOKEN:?CI_RELEASE_TOKEN is empty. Same setup as CI_PUSH_TOKEN, with api scope. See README.md → Required CI/CD variables.}"
+    - git remote set-url origin "https://oauth2:${CI_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+
+validate-and-organize:
+  <<: *base-setup
+  stage: validate-and-organize
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
+      changes:
+        - config.toml
+        - .gitlab-ci.yml
+        - pieces/**/*
+        - dependencies/**/*
+        - scripts/verify_domino_imports.py
+    - when: never
+  script:
+    - |
+      python -c "
+      from pathlib import Path
+      import tomli
+      p = Path('config.toml')
+      b = p.read_bytes()
+      if b.startswith(b'\xef\xbb\xbf'):
+          p.write_bytes(b[3:])
+      tomli.load(p.open('rb'))
+      "
+    - python scripts/verify_domino_imports.py
+    - domino piece-repository organize --build-images --source-url="${CI_PROJECT_URL}"
+    - DOCKER_CLIENT_TIMEOUT=600 domino piece-repository publish-images --registry-username "$CONTAINER_REGISTRY_USERNAME" --registry-token "$CONTAINER_REGISTRY_PASSWORD"
+    - |
+      GIT_STATUS=$(git status -s -- .domino/)
+      if [ -n "$GIT_STATUS" ]; then
+        git add .domino/
+        git commit -m "auto-organize"
+        git push origin HEAD:main
+      fi
+    - domino piece-repository release
+
+run-tests-dev:
+  <<: *base-setup
+  stage: run-tests-dev
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" && $CI_PIPELINE_SOURCE == "push"'
+    - when: never
+  script:
+    - domino piece-repository organize --build-images --source-url="${CI_PROJECT_URL}" --tag-overwrite=development
+    - DOCKER_CLIENT_TIMEOUT=600 domino piece-repository publish-images --registry-username "$CONTAINER_REGISTRY_USERNAME" --registry-token "$CONTAINER_REGISTRY_PASSWORD"
+    - domino piece-repository delete-release --tag-name=development
+    - domino piece-repository release --tag-name=development
