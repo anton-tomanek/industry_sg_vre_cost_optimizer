@@ -93,7 +93,14 @@ validate-and-organize:
         git commit -m "auto-organize"
         git push origin "HEAD:${CI_COMMIT_BRANCH}"
       fi
-    - domino piece-repository release
+    - |
+      VERSION=$(python -c "import tomli; print(tomli.load(open('config.toml','rb'))['repository']['VERSION'])")
+      git fetch --tags origin
+      if git rev-parse "refs/tags/${VERSION}" >/dev/null 2>&1; then
+        echo "Release tag ${VERSION} already exists — skipping domino piece-repository release"
+      else
+        domino piece-repository release
+      fi
 
 run-tests-dev:
   <<: *base-setup
