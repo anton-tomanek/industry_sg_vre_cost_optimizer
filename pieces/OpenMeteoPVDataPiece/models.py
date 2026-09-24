@@ -178,3 +178,14 @@ class OutputModel(BaseModel):
         title="Target column",
         description="Suggested target column for the generated dataset (pass downstream via fromUpstream).",
     )
+
+
+try:
+    from common.onedata_models import OneDataSecretsModel
+except ModuleNotFoundError:
+    from pieces.common.onedata_models import OneDataSecretsModel
+
+
+class SecretsModel(OneDataSecretsModel):
+    """OneData secrets so the piece honours the repository secrets set in Domino
+    (output dir, host, token) instead of the built-in defaults."""
