@@ -5,35 +5,35 @@
             "requirements_file": "requirements_0.txt"
         },
         "pieces": [
-            "PVOUTPredictionModelTrainPiece",
-            "KPIPiece",
             "ShmuCalibrationPiece",
-            "SimulatePiece",
-            "CatalogSyncPiece",
+            "SizingOptimizationPiece",
+            "PVOUTPredictionModelTrainPiece",
+            "BatterySimPiece",
+            "UserInputPiece",
+            "PVOUTErrorCorrectionModelTrainPiece",
+            "DashboardPiece",
             "PvoutModelFeatureSelectPiece",
-            "PvoutToVirtualSolarPiece",
+            "CatalogSyncPiece",
+            "KPIPiece",
+            "DataNormalizationPiece",
+            "InferencePiece",
+            "SimulatePiece",
             "BatteryStrategyOptimizerPiece",
-            "DataPreprocessingPiece",
-            "PvoutStagedInferenceSpecPiece",
-            "InvestmentEvalPiece",
-            "SizingHeatmapPiece",
+            "TechnicalLimitsPiece",
+            "CatalogRankerPiece",
+            "PvoutToVirtualSolarPiece",
             "ModelDeciderPiece",
             "OpenMeteoPVDataPiece",
-            "DataNormalizationPiece",
-            "CatalogRankerPiece",
-            "DashboardPiece",
-            "PVOUTErrorCorrectionModelTrainPiece",
-            "InferencePiece",
-            "UserInputPiece",
-            "SizingOptimizationPiece",
-            "BatterySimPiece",
-            "TechnicalLimitsPiece"
+            "InvestmentEvalPiece",
+            "SizingHeatmapPiece",
+            "PvoutStagedInferenceSpecPiece",
+            "DataPreprocessingPiece"
         ],
         "secrets": [
             "onedata_onezone_host",
-            "onedata_token",
-            "onedata_output_dir"
+            "onedata_output_dir",
+            "onedata_token"
         ],
-        "source_image": "harbor.testbed.spice-platform.eu/partner/uc3/industry_sg_vre_cost_optimizer:0.1.50-group0"
+        "source_image": "ghcr.io/anton-tomanek/industry_sg_vre_cost_optimizer:0.1.51-group0"
     }
 }
