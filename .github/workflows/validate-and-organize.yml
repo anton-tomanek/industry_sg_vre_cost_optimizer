@@ -67,6 +67,7 @@ jobs:
         run: |
           python <<'PY'
           import json
+          import os
           import re
           import subprocess
           from pathlib import Path
@@ -74,7 +75,8 @@ jobs:
           import tomli
 
           version = tomli.load(open("config.toml", "rb"))["repository"]["VERSION"]
-          ghcr = f"ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer:{version}-group0"
+          owner = os.environ["GITHUB_REPOSITORY_OWNER"].lower()
+          ghcr = f"ghcr.io/{owner}/industry_sg_vre_cost_optimizer:{version}-group0"
 
           dm_path = Path(".domino/dependencies_map.json")
           dm = json.loads(dm_path.read_text(encoding="utf-8"))
@@ -93,7 +95,7 @@ jobs:
               text = text.replace(built, ghcr)
               text = re.sub(
                   r"ghcr\.io/harbor\.testbed\.spice-platform\.eu/partner/uc3/industry_sg_vre_cost_optimizer",
-                  "ghcr.io/filipchrvala/industry_sg_vre_cost_optimizer",
+                  f"ghcr.io/{owner}/industry_sg_vre_cost_optimizer",
                   text,
               )
               meta.write_text(text, encoding="utf-8")

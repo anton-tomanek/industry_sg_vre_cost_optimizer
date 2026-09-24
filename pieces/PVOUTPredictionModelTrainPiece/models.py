@@ -95,3 +95,14 @@ class OutputModel(BaseModel):
         default_factory=dict,
         description="Optional outputs (e.g., trained model URI, training metrics).",
     )
+
+
+try:
+    from common.onedata_models import OneDataSecretsModel
+except ModuleNotFoundError:
+    from pieces.common.onedata_models import OneDataSecretsModel
+
+
+class SecretsModel(OneDataSecretsModel):
+    """OneData secrets so the piece honours the repository secrets set in Domino
+    (output dir, host, token) instead of the built-in defaults."""
