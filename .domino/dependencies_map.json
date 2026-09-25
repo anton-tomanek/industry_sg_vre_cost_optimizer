@@ -5,35 +5,35 @@
             "requirements_file": "requirements_0.txt"
         },
         "pieces": [
-            "ShmuCalibrationPiece",
-            "SizingOptimizationPiece",
-            "PVOUTPredictionModelTrainPiece",
-            "BatterySimPiece",
-            "UserInputPiece",
-            "PVOUTErrorCorrectionModelTrainPiece",
-            "DashboardPiece",
-            "PvoutModelFeatureSelectPiece",
-            "CatalogSyncPiece",
-            "KPIPiece",
-            "DataNormalizationPiece",
-            "InferencePiece",
-            "SimulatePiece",
-            "BatteryStrategyOptimizerPiece",
-            "TechnicalLimitsPiece",
-            "CatalogRankerPiece",
-            "PvoutToVirtualSolarPiece",
-            "ModelDeciderPiece",
-            "OpenMeteoPVDataPiece",
             "InvestmentEvalPiece",
-            "SizingHeatmapPiece",
+            "DataNormalizationPiece",
+            "DashboardPiece",
             "PvoutStagedInferenceSpecPiece",
-            "DataPreprocessingPiece"
+            "PVOUTPredictionModelTrainPiece",
+            "KPIPiece",
+            "OpenMeteoPVDataPiece",
+            "CatalogRankerPiece",
+            "SimulatePiece",
+            "CatalogSyncPiece",
+            "BatterySimPiece",
+            "TechnicalLimitsPiece",
+            "DataPreprocessingPiece",
+            "ModelDeciderPiece",
+            "InferencePiece",
+            "PvoutToVirtualSolarPiece",
+            "SizingHeatmapPiece",
+            "PVOUTErrorCorrectionModelTrainPiece",
+            "BatteryStrategyOptimizerPiece",
+            "ShmuCalibrationPiece",
+            "PvoutModelFeatureSelectPiece",
+            "UserInputPiece",
+            "SizingOptimizationPiece"
         ],
         "secrets": [
+            "onedata_token",
             "onedata_onezone_host",
-            "onedata_output_dir",
-            "onedata_token"
+            "onedata_output_dir"
         ],
-        "source_image": "ghcr.io/anton-tomanek/industry_sg_vre_cost_optimizer:0.1.51-group0"
+        "source_image": "ghcr.io/anton-tomanek/industry_sg_vre_cost_optimizer:0.1.52-group0"
     }
 }
