@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import unicodedata
 from pathlib import Path
 
 import pandas as pd
@@ -34,9 +35,19 @@ class UserInputPiece(BasePiece):
             return pd.read_excel(path, sheet_name=0)
         return pd.read_csv(path, sep=None, engine="python", encoding="utf-8-sig", decimal=",")
 
+    # Accepted names of the time column after normalisation (lowercase, no
+    # diacritics, spaces -> "_"); e.g. "Dátum a čas" -> "datum_a_cas".
+    DATETIME_ALIASES = ("datetime", "date_time", "timestamp", "datum_a_cas", "datum_cas", "datum")
+
     @staticmethod
-    def _normalize_datetime_column(df: pd.DataFrame) -> pd.DataFrame:
-        cols = {c: c.strip().lower().replace(" ", "_") for c in df.columns}
+    def _normalize_column_name(name) -> str:
+        key = unicodedata.normalize("NFKD", str(name).strip().lower())
+        key = "".join(ch for ch in key if not unicodedata.combining(ch))
+        return key.replace(" ", "_")
+
+    @classmethod
+    def _normalize_datetime_column(cls, df: pd.DataFrame) -> pd.DataFrame:
+        cols = {c: str(c).strip().lower().replace(" ", "_") for c in df.columns}
         df = df.rename(columns=cols)
         dt_col = None
         for cand in ("datetime", "date_time", "timestamp"):
@@ -44,7 +55,18 @@ class UserInputPiece(BasePiece):
                 dt_col = cand
                 break
         if dt_col is None:
-            raise ValueError("Súbor musí obsahovať stĺpec datetime/date_time/timestamp")
+            # Local-language headers (e.g. "datum a cas" in the UC3.2 Excel samples).
+            for col in df.columns:
+                if cls._normalize_column_name(col) in cls.DATETIME_ALIASES:
+                    dt_col = col
+                    break
+        if dt_col is None:
+            raise ValueError(
+                "Súbor musí obsahovať stĺpec datetime/date_time/timestamp (alebo „dátum a čas“)"
+            )
+        if dt_col not in ("datetime", "date_time", "timestamp"):
+            df = df.rename(columns={dt_col: "date_time"})
+            dt_col = "date_time"
         raw_dt = df[dt_col].astype(str).str.strip()
         # Support both ISO (YYYY-MM-DD ...) and local day-first formats (dd.mm.yyyy ...).
         dt_iso = pd.to_datetime(raw_dt, errors="coerce", dayfirst=False, format="mixed")

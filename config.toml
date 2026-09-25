@@ -2,4 +2,4 @@
 REGISTRY_NAME = "harbor.testbed.spice-platform.eu/partner/uc3"
 REPOSITORY_NAME = "industry_sg_vre_cost_optimizer"
 REPOSITORY_LABEL = "Industry SG VRE Cost Optimizer"
-VERSION = "0.1.51"
+VERSION = "0.1.52"
