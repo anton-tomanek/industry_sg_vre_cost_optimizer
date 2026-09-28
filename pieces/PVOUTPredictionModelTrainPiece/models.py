@@ -22,7 +22,13 @@ class ModelSpec(BaseModel):
     base_forecast_column: str | None = Field(default=None)
 
 
-class InputModel(BaseModel):
+try:
+    from common.onedata_models import RunIdInputMixin
+except ModuleNotFoundError:
+    from pieces.common.onedata_models import RunIdInputMixin
+
+
+class InputModel(RunIdInputMixin):
     model_config = ConfigDict(extra="allow")
 
     model_type: str | None = Field(default=None, description="Training model type.")

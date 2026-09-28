@@ -1,7 +1,13 @@
 from pydantic import BaseModel, Field
 
 
-class InputModel(BaseModel):
+try:
+    from common.onedata_models import RunIdInputMixin
+except ModuleNotFoundError:
+    from pieces.common.onedata_models import RunIdInputMixin
+
+
+class InputModel(RunIdInputMixin):
     baseline_model_path: str = Field(
         description="PVOUTPredictionModelTrainPiece.model_path (absolute baseline).",
     )

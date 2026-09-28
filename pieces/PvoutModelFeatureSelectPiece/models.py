@@ -1,7 +1,13 @@
 from pydantic import BaseModel, Field
 
 
-class InputModel(BaseModel):
+try:
+    from common.onedata_models import RunIdInputMixin
+except ModuleNotFoundError:
+    from pieces.common.onedata_models import RunIdInputMixin
+
+
+class InputModel(RunIdInputMixin):
     data_path: str = Field(description="Passthrough preprocessed/normalized CSV path (keeps datetime column).")
     feature_columns: list[str] = Field(
         default_factory=list,
