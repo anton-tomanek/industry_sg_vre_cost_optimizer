@@ -5,35 +5,35 @@
             "requirements_file": "requirements_0.txt"
         },
         "pieces": [
-            "InvestmentEvalPiece",
-            "DataNormalizationPiece",
-            "DashboardPiece",
-            "PvoutStagedInferenceSpecPiece",
-            "PVOUTPredictionModelTrainPiece",
-            "KPIPiece",
+            "DataPreprocessingPiece",
             "OpenMeteoPVDataPiece",
-            "CatalogRankerPiece",
+            "PVOUTPredictionModelTrainPiece",
+            "PvoutToVirtualSolarPiece",
+            "InvestmentEvalPiece",
             "SimulatePiece",
+            "BatteryStrategyOptimizerPiece",
+            "InferencePiece",
+            "DashboardPiece",
+            "DataNormalizationPiece",
+            "CatalogRankerPiece",
             "CatalogSyncPiece",
+            "PvoutModelFeatureSelectPiece",
+            "ShmuCalibrationPiece",
+            "UserInputPiece",
+            "KPIPiece",
             "BatterySimPiece",
             "TechnicalLimitsPiece",
-            "DataPreprocessingPiece",
             "ModelDeciderPiece",
-            "InferencePiece",
-            "PvoutToVirtualSolarPiece",
-            "SizingHeatmapPiece",
+            "SizingOptimizationPiece",
             "PVOUTErrorCorrectionModelTrainPiece",
-            "BatteryStrategyOptimizerPiece",
-            "ShmuCalibrationPiece",
-            "PvoutModelFeatureSelectPiece",
-            "UserInputPiece",
-            "SizingOptimizationPiece"
+            "SizingHeatmapPiece",
+            "PvoutStagedInferenceSpecPiece"
         ],
         "secrets": [
-            "onedata_onezone_host",
             "onedata_token",
+            "onedata_onezone_host",
             "onedata_output_dir"
         ],
-        "source_image": "ghcr.io/anton-tomanek/industry_sg_vre_cost_optimizer:0.1.53-group0"
+        "source_image": "harbor.testbed.spice-platform.eu/partner/uc3/industry_sg_vre_cost_optimizer:0.1.54-group0"
     }
 }
