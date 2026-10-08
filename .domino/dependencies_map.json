@@ -30,9 +30,9 @@
             "SizingOptimizationPiece"
         ],
         "secrets": [
-            "onedata_onezone_host",
             "onedata_token",
-            "onedata_output_dir"
+            "onedata_output_dir",
+            "onedata_onezone_host"
         ],
         "source_image": "ghcr.io/anton-tomanek/industry_sg_vre_cost_optimizer:0.1.53-group0"
     }
