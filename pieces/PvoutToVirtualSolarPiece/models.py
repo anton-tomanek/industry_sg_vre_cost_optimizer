@@ -3,7 +3,13 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
-class InputModel(BaseModel):
+try:
+    from common.onedata_models import RunIdInputMixin
+except ModuleNotFoundError:
+    from pieces.common.onedata_models import RunIdInputMixin
+
+
+class InputModel(RunIdInputMixin):
     forecast_csv_path: str = Field(
         description="Path to UC3.4 InferencePiece forecast CSV (final_forecast / PVOUT)."
     )

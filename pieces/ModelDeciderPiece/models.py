@@ -1,7 +1,13 @@
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
-class InputModel(BaseModel):
+try:
+    from common.onedata_models import RunIdInputMixin
+except ModuleNotFoundError:
+    from pieces.common.onedata_models import RunIdInputMixin
+
+
+class InputModel(RunIdInputMixin):
     model_config = ConfigDict(extra="allow")
 
     problem_type: str | None = Field(

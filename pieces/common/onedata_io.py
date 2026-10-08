@@ -433,11 +433,25 @@ def _output_base(secrets_data: Any) -> str | None:
     return str(val).strip() or None
 
 
+def _run_timestamp() -> str:
+    """Local (Europe/Bratislava) timestamp for ``{timestamp}`` in run_id; UTC fallback."""
+    from datetime import datetime, timezone
+    try:
+        from zoneinfo import ZoneInfo
+        now = datetime.now(ZoneInfo("Europe/Bratislava"))
+    except Exception:
+        now = datetime.now(timezone.utc)
+    return now.strftime("%Y-%m-%d_%H%M%S")
+
+
 def resolve_run_id(input_data: Any, secrets_data: Any, *, generate: bool = False) -> str | None:
     """Per-workflow run folder under ``onedata_output_dir`` (e.g. ``.../outputs/<run_id>/``)."""
     rid = _get(input_data, "run_id")
     if rid and str(rid).strip():
-        return str(rid).strip()
+        rid = str(rid).strip()
+        if generate and "{timestamp}" in rid:
+            rid = rid.replace("{timestamp}", _run_timestamp())
+        return rid
     rid = _get(secrets_data, "onedata_run_id") or os.environ.get("ONEDATA_RUN_ID")
     if rid and str(rid).strip():
         return str(rid).strip()
