@@ -361,12 +361,19 @@ class OpenMeteoPVDataPiece(BasePiece):
             self.logger.info("Open-Meteo dataset saved to %s", file_path)
             self.display_result = {"file_type": "csv", "file_path": file_path}
 
-            if stage is not None:
-                stage.cleanup()
-            return OutputModel(
+            out = OutputModel(
                 file_path=file_path,
                 target_column=TARGET_COLUMN,
             )
+            if od is not None:
+                # Mirror to OneData so the next piece (own K8s pod) can stage the CSV.
+                run_id = od.resolve_run_id(input_data, secrets_data, generate=False)
+                return od.finish_piece(
+                    out, self.results_path, secrets_data, "OpenMeteoPVDataPiece", stage, run_id=run_id
+                )
+            if stage is not None:
+                stage.cleanup()
+            return out
         except Exception:
             if stage is not None:
                 try:
