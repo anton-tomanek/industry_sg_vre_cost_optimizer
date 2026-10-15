@@ -1,0 +1,15 @@
+UC3.2 SEED – Mac
+=============================================
+
+1. Na Macu raz:
+     chmod +x start_local_web.command
+
+2. Dvojklik na start_local_web.command
+   (prvy krat: pravym → Open, ak Gatekeeper pyta)
+
+3. Otvorí sa http://127.0.0.1:8088/
+
+Poznamky:
+- Potrebne pip baliky: pozri dependencies/requirements_0.txt
+  (ak este nie su: python3 -m pip install -r dependencies/requirements_0.txt)
+- Vysledky: .local_runs/<timestamp>/ vedla projektu (iba lokalne PC).

@@ -15,7 +15,15 @@ import time
 import webbrowser
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+import os
+
+os.environ.setdefault("UC32_LOCAL_MODE", "1")
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+os.environ.setdefault("PYTHONUTF8", "1")
+
+from runtime_paths import ensure_import_paths  # noqa: E402
+
+ensure_import_paths()
 
 
 def _free(port: int) -> bool:
@@ -30,8 +38,6 @@ def main() -> int:
     parser.add_argument("--no-browser", action="store_true")
     args = parser.parse_args()
 
-    sys.path.insert(0, str(ROOT / "webapp"))
-    sys.path.insert(0, str(ROOT / "scripts"))
     from app import serve  # noqa: E402
 
     if not _free(args.port):
@@ -43,9 +49,10 @@ def main() -> int:
         return 1
 
     url = f"http://127.0.0.1:{args.port}/"
+    print(f"UC3.2 SEED — {url}")
+    print("Toto okno nechajte otvorené. Zastavenie: Ctrl+C")
     if not args.no_browser:
         threading.Thread(target=lambda: (time.sleep(0.6), webbrowser.open(url)), daemon=True).start()
-    print(url)
     serve(args.port)
     return 0
 

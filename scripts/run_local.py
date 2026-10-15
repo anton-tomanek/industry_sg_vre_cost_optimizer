@@ -23,14 +23,30 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
-PIECES = ROOT / "pieces"
+import os
+
+os.environ.setdefault("UC32_LOCAL_MODE", "1")
+
+from runtime_paths import app_root, bundle_root, ensure_import_paths  # noqa: E402
+
+ensure_import_paths()
+
+BUNDLE = bundle_root()
+ROOT = app_root()
+PIECES = BUNDLE / "pieces"
+
+
+def _print(line: str) -> None:
+    try:
+        print(line, flush=True)
+    except UnicodeEncodeError:
+        encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+        print(line.encode(encoding, errors="replace").decode(encoding, errors="replace"), flush=True)
 
 
 def install_domino_stub() -> None:
     """Point `domino.base_piece` at the local harness before any piece imports."""
-    sys.path.insert(0, str(ROOT))
-    sys.path.insert(0, str(PIECES))
+    ensure_import_paths()
 
     from local_compat import install_domino_stub as install
 
@@ -43,7 +59,7 @@ def _uncache_project_modules() -> None:
     The form server is one long-lived process. Without this, the first heatmap
     (or dashboard) import is frozen for every later submit.
     """
-    root = str(ROOT.resolve())
+    roots = {str(BUNDLE.resolve()), str(ROOT.resolve())}
     for key, mod in list(sys.modules.items()):
         file = getattr(mod, "__file__", None) or ""
         if not file:
@@ -52,9 +68,10 @@ def _uncache_project_modules() -> None:
             path = str(Path(file).resolve())
         except (OSError, RuntimeError):
             continue
-        if not path.startswith(root):
+        matched = next((r for r in roots if path.startswith(r)), None)
+        if not matched:
             continue
-        rel = path[len(root):].lstrip("\\/").replace("\\", "/")
+        rel = path[len(matched) :].lstrip("\\/").replace("\\", "/")
         if rel.startswith("pieces/local_compat"):
             continue
         if rel.startswith(("pieces/", "webapp/", "scripts/")):
@@ -182,7 +199,7 @@ def run_workflow(
 
     for index, name in enumerate(order):
         if name in skipped:
-            print(f"SKIP  {name}")
+            _print(f"SKIP  {name}")
             item = {"piece": name, "status": "skipped"}
             report.append(item)
             emit({"type": "piece_end", **item, "index": index, "total": len(order)})
@@ -195,7 +212,7 @@ def run_workflow(
         except Exception as exc:  # noqa: BLE001
             elapsed = time.time() - started
             (out / f"{name}.error.txt").write_text(traceback.format_exc(), encoding="utf-8")
-            print(f"FAIL  {name} ({elapsed:.1f}s): {type(exc).__name__}: {exc}")
+            _print(f"FAIL  {name} ({elapsed:.1f}s): {type(exc).__name__}: {exc}")
             item = {
                 "piece": name,
                 "status": "failed",
@@ -210,7 +227,7 @@ def run_workflow(
 
         elapsed = time.time() - started
         if result is None:
-            print(f"FAIL  {name} ({elapsed:.1f}s): {problem}")
+            _print(f"FAIL  {name} ({elapsed:.1f}s): {problem}")
             item = {
                 "piece": name,
                 "status": "failed",
@@ -225,7 +242,7 @@ def run_workflow(
 
         outputs[name] = result
         message = str(result.get("message", "")).strip()
-        print(f"OK    {name} ({elapsed:.1f}s){f': {message}' if message else ''}")
+        _print(f"OK    {name} ({elapsed:.1f}s){f': {message}' if message else ''}")
         item = {
             "piece": name,
             "status": "ok",
@@ -247,7 +264,7 @@ def run_workflow(
         json.dumps({**summary, "outputs": outputs}, indent=2, ensure_ascii=False, default=str),
         encoding="utf-8",
     )
-    print(
+    _print(
         f"\n{len(report) - len(failed) - len(skipped)} ok, "
         f"{len(failed)} failed, {len(skipped)} skipped"
     )
@@ -255,10 +272,24 @@ def run_workflow(
     return summary
 
 
+def _default_out_dir() -> Path:
+    from datetime import datetime
+    import uuid
+
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_id = f"{stamp}_{uuid.uuid4().hex[:6]}"
+    return ROOT / ".local_runs" / run_id
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--inputs", type=Path, default=ROOT / "examples" / "demo_site")
-    parser.add_argument("--out", type=Path, default=ROOT / ".local_run")
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Output folder (default: .local_runs/<timestamp>_<id>).",
+    )
     parser.add_argument(
         "--skip",
         nargs="*",
@@ -290,15 +321,20 @@ def main() -> int:
         print(f"Missing input under {args.inputs}\nRun scripts/make_demo_inputs.py first.")
         return 2
 
+    out = args.out or _default_out_dir()
+    out.mkdir(parents=True, exist_ok=True)
+    (ROOT / ".local_runs").mkdir(parents=True, exist_ok=True)
+    _print(f"Výstup (iba lokálne): {out}")
     try:
         summary = run_workflow(
             load_csv=load_csv,
             scenario_yaml=scenario_yaml,
-            out=args.out,
+            out=out,
             skip=args.skip,
             stop_on_error=args.stop_on_error,
             prices_csv=str(args.prices) if args.prices else "",
         )
+        (ROOT / ".local_runs" / "latest.txt").write_text(out.name + "\n", encoding="utf-8")
     except FileNotFoundError as exc:
         print(exc)
         return 2

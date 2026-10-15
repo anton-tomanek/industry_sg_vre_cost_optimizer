@@ -58,6 +58,12 @@ _backend_ready = False
 _onedata_configured = False
 
 
+def local_mode() -> bool:
+    """True for local web / .exe runs — never fall back to hardcoded OneData defaults."""
+    flag = (os.environ.get("UC32_LOCAL_MODE") or os.environ.get("ONEDATA_DISABLE") or "").strip().lower()
+    return flag in {"1", "true", "yes", "on"}
+
+
 def onedata_configured() -> bool:
     return _onedata_configured
 
@@ -86,12 +92,23 @@ def _ensure_backend() -> None:
         return
     try:
         from . import onedatarestfsspec  # noqa: F401  (vendored, self-registers)
+    except ModuleNotFoundError as exc:
+        raise ModuleNotFoundError(
+            "OneData backend needs 'onedatafilerestclient'. "
+            "For local / .exe runs set UC32_LOCAL_MODE=1 (start_local_web does this)."
+        ) from exc
     except Exception:
         import sys
         here = os.path.dirname(os.path.abspath(__file__))
         if here not in sys.path:
             sys.path.insert(0, here)
-        import onedatarestfsspec  # noqa: F401
+        try:
+            import onedatarestfsspec  # noqa: F401
+        except ModuleNotFoundError as exc:
+            raise ModuleNotFoundError(
+                "OneData backend needs 'onedatafilerestclient'. "
+                "For local / .exe runs set UC32_LOCAL_MODE=1 (start_local_web does this)."
+            ) from exc
     _backend_ready = True
 
 
@@ -137,6 +154,9 @@ def configure_onedata(secrets_data: Any, *, force: bool = False) -> bool:
     Falls back to environment variables (used by the onedata pytest jobs).
     """
     global _onedata_configured
+    if local_mode():
+        _onedata_configured = False
+        return False
     merged = effective_secrets(secrets_data, use_defaults=force)
     host = merged.get("onedata_onezone_host")
     token = merged.get("onedata_token")
@@ -426,6 +446,13 @@ def _remote_name(path: str) -> str:
 
 
 def _output_base(secrets_data: Any) -> str | None:
+    if local_mode():
+        # Local web / .exe: keep results on disk only.
+        raw = _get(secrets_data, "onedata_output_dir")
+        if isinstance(raw, str) and raw.strip():
+            return raw.strip()
+        env = os.environ.get("ONEDATA_OUTPUT_BASE")
+        return str(env).strip() or None if env else None
     raw = _get(secrets_data, "onedata_output_dir")
     if isinstance(raw, str) and not raw.strip():
         return None

@@ -18,16 +18,17 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, unquote
 
-ROOT = Path(__file__).resolve().parents[1]
-WEBAPP = Path(__file__).resolve().parent
-SCRIPTS = ROOT / "scripts"
-STATIC = WEBAPP / "static"
-RUNS = ROOT / ".local_web"
-DEFAULT_PORT = 8088
+from runtime_paths import app_root, bundle_root, ensure_import_paths  # noqa: E402
 
-for path in (ROOT, WEBAPP, SCRIPTS):
-    if str(path) not in sys.path:
-        sys.path.insert(0, str(path))
+ensure_import_paths()
+
+BUNDLE = bundle_root()
+ROOT = app_root()  # writable: .local_runs next to .exe / repo
+WEBAPP = BUNDLE / "webapp" if (BUNDLE / "webapp" / "static").is_dir() else Path(__file__).resolve().parent
+SCRIPTS = BUNDLE / "scripts"
+STATIC = WEBAPP / "static"
+RUNS_ROOT = ROOT / ".local_runs"
+DEFAULT_PORT = 8088
 
 from scenario_from_form import build_scenario  # noqa: E402
 from make_demo_inputs import build_load  # noqa: E402
@@ -43,7 +44,41 @@ _state: dict[str, Any] = {
     "dashboard": None,
     "error": None,
     "log": [],
+    "run_id": None,
+    "run_dir": None,
 }
+
+
+def _new_run_id() -> str:
+    from datetime import datetime
+    import uuid
+
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return f"{stamp}_{uuid.uuid4().hex[:6]}"
+
+
+def _latest_run_dir() -> Path | None:
+    with _lock:
+        current = _state.get("run_dir")
+        if current:
+            path = Path(str(current))
+            if path.is_dir():
+                return path
+    pointer = RUNS_ROOT / "latest.txt"
+    if pointer.is_file():
+        name = pointer.read_text(encoding="utf-8").strip()
+        if name:
+            path = RUNS_ROOT / name
+            if path.is_dir():
+                return path
+    if not RUNS_ROOT.is_dir():
+        return None
+    candidates = sorted(
+        (p for p in RUNS_ROOT.iterdir() if p.is_dir()),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    return candidates[0] if candidates else None
 
 
 def _snapshot() -> dict[str, Any]:
@@ -57,6 +92,8 @@ def _snapshot() -> dict[str, Any]:
             "dashboard": _state["dashboard"],
             "error": _state["error"],
             "log": list(_state["log"]),
+            "run_id": _state.get("run_id"),
+            "run_dir": _state.get("run_dir"),
         }
 
 
@@ -102,22 +139,21 @@ def _suffix(filename: str, fallback: str) -> str:
 
 
 def _write_inputs(
-    fields: dict[str, Any], files: dict[str, tuple[str, bytes]]
+    run_dir: Path, fields: dict[str, Any], files: dict[str, tuple[str, bytes]]
 ) -> tuple[Path, Path, str]:
-    RUNS.mkdir(parents=True, exist_ok=True)
-    run_dir = RUNS / "inputs"
-    run_dir.mkdir(parents=True, exist_ok=True)
-    scenario_path = run_dir / "scenario.yaml"
+    inputs_dir = run_dir / "inputs"
+    inputs_dir.mkdir(parents=True, exist_ok=True)
+    scenario_path = inputs_dir / "scenario.yaml"
     prices_path = ""
 
     use_demo = str(fields.get("use_demo") or "no") != "no"
     uploaded = files.get("load_csv")
     if not use_demo and uploaded and uploaded[1]:
-        load_path = run_dir / f"load_upload{_suffix(uploaded[0], '.csv')}"
+        load_path = inputs_dir / f"load_upload{_suffix(uploaded[0], '.csv')}"
         load_path.write_bytes(uploaded[1])
     elif use_demo:
-        load_path = run_dir / "load_and_prices.csv"
-        demo = ROOT / "examples" / "demo_site" / "load_and_prices.csv"
+        load_path = inputs_dir / "load_and_prices.csv"
+        demo = BUNDLE / "examples" / "demo_site" / "load_and_prices.csv"
         if demo.is_file():
             load_path.write_bytes(demo.read_bytes())
         else:
@@ -129,7 +165,7 @@ def _write_inputs(
 
     prices = files.get("prices_csv")
     if prices and prices[1]:
-        dest = run_dir / f"prices_upload{_suffix(prices[0], '.csv')}"
+        dest = inputs_dir / f"prices_upload{_suffix(prices[0], '.csv')}"
         dest.write_bytes(prices[1])
         prices_path = str(dest)
 
@@ -141,8 +177,15 @@ def _write_inputs(
 
 
 def _run_job(fields: dict[str, Any], files: dict[str, tuple[str, bytes]]) -> None:
+    run_id = _new_run_id()
+    out = RUNS_ROOT / run_id
+    out.mkdir(parents=True, exist_ok=True)
+    with _lock:
+        _state["run_id"] = run_id
+        _state["run_dir"] = str(out)
     try:
-        load_path, scenario_path, prices_path = _write_inputs(fields, files)
+        load_path, scenario_path, prices_path = _write_inputs(out, fields, files)
+        _log(f"Beh (iba lokálne PC): {out}\n")
         _log(f"Odber: {load_path}\n")
         _log(f"Scenár: {scenario_path}\n")
         if prices_path:
@@ -151,11 +194,7 @@ def _run_job(fields: dict[str, Any], files: dict[str, tuple[str, bytes]]) -> Non
             _log("Cenník: nebol nahratý — ak odber ceny nemá, stiahne sa OKTE DAM.\n")
 
         from run_local import run_workflow
-        import shutil
 
-        out = ROOT / ".local_run"
-        if out.exists():
-            shutil.rmtree(out)
         summary = run_workflow(
             load_csv=load_path,
             scenario_yaml=scenario_path,
@@ -164,6 +203,8 @@ def _run_job(fields: dict[str, Any], files: dict[str, tuple[str, bytes]]) -> Non
             prices_csv=prices_path,
             on_event=_event,
         )
+        (RUNS_ROOT / "latest.txt").write_text(run_id + "\n", encoding="utf-8")
+        (out / "run_id.txt").write_text(run_id + "\n", encoding="utf-8")
         with _lock:
             _state["phase"] = "done"
             _state["ok"] = summary["ok"]
@@ -239,15 +280,17 @@ class Handler(BaseHTTPRequestHandler):
             self._json(200, _snapshot())
             return
         if path == "/dashboard.html":
-            dash = ROOT / ".local_run" / "DashboardPiece" / "dashboard.html"
-            if not dash.is_file():
+            run_dir = _latest_run_dir()
+            dash = (run_dir / "DashboardPiece" / "dashboard.html") if run_dir else None
+            if dash is None or not dash.is_file():
                 self._send(404, "Dashboard ešte nie je hotový.".encode("utf-8"), "text/plain; charset=utf-8")
                 return
             html = dash.read_bytes()
+            run_label = run_dir.name if run_dir else ""
             banner = (
                 '<div style="position:sticky;top:0;z-index:20;background:#163a56;color:#fff;'
                 'padding:8px 16px;font:13px/1.4 sans-serif;display:flex;justify-content:space-between;gap:12px;">'
-                '<span>UC3.2. SEED</span>'
+                f'<span>UC3.2. SEED — {run_label}</span>'
                 '<a href="/" style="color:#9ad4ef" data-i18n="nav.new">Nový výpočet</a></div>'
             ).encode("utf-8")
             if b"<body>" in html:
@@ -289,6 +332,8 @@ class Handler(BaseHTTPRequestHandler):
                     "dashboard": None,
                     "error": None,
                     "log": [],
+                    "run_id": None,
+                    "run_dir": None,
                 }
             )
 

@@ -62,7 +62,7 @@ class PvoutStagedInferenceSpecPiece(BasePiece):
 
         return OutputModel(
             message=(
-                f"Built staged pvout_model (baseline→{pred_col}→correction) "
+                f"Built staged pvout_model (baseline->{pred_col}->correction) "
                 f"with {len(feats)} features."
             ),
             pvout_model=[entry],
