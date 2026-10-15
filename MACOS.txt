@@ -1,15 +1,32 @@
 UC3.2 SEED – Mac
 =============================================
 
+Potrebný je Python 3.10 – 3.12 (python3 v termináli).
+
 1. Na Macu raz:
      chmod +x start_local_web.command
 
 2. Dvojklik na start_local_web.command
-   (prvy krat: pravym → Open, ak Gatekeeper pyta)
+   (prvý krát: pravým → Open, ak Gatekeeper pýta)
+   Prvé spustenie vytvorí virtuálne prostredie .venv vedľa projektu
+   a nainštaluje doň balíky (niekoľko minút, treba internet).
+   Ďalšie spustenia už len použijú .venv.
 
 3. Otvorí sa http://127.0.0.1:8088/
 
-Poznamky:
-- Potrebne pip baliky: pozri dependencies/requirements_0.txt
-  (ak este nie su: python3 -m pip install -r dependencies/requirements_0.txt)
-- Vysledky: .local_runs/<timestamp>/ vedla projektu (iba lokalne PC).
+Ručná inštalácia (ak treba, napr. bez dvojkliku):
+     python3 -m venv .venv
+     .venv/bin/python -m pip install -r dependencies/requirements_local.txt
+     export SSL_CERT_FILE="$(.venv/bin/python -m certifi)"
+     UC32_LOCAL_MODE=1 .venv/bin/python scripts/start_local_web.py
+
+Poznámky:
+- Balíky sa inštalujú do .venv, nie do systémového Pythonu — nezasahuje
+  to do iných projektov a nezávisí od toho, čo už je nainštalované.
+  Odinštalovanie: zmazať priečinok .venv.
+- requirements_local.txt = requirements_0.txt bez onedatafilerestclient
+  (lokálne sa OneData nepoužíva).
+- Spúšťač nastaví SSL_CERT_FILE na certifikáty z balíka certifi. Python
+  z python.org ich sám nemá a sťahovanie (katalóg FVE, počasie) by
+  zlyhalo na CERTIFICATE_VERIFY_FAILED.
+- Výsledky: .local_runs/<timestamp>/ vedľa projektu (iba lokálne PC).
